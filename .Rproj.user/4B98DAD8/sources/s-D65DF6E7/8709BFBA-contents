@@ -13,12 +13,18 @@ library(MetaUtility)
 library(robumeta)
 library(testthat)
 
+root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology"
+raw.data.dir = paste(root.dir, "Raw data", sep="/")
+prepped.data.dir = paste(root.dir, "Prepped data", sep="/")
+code.dir = paste(root.dir, "Code (git)", sep="/")
+results.dir = paste(root.dir, "Results from R", sep="/")
 
-raw.data.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology/Raw data"
+setwd(code.dir)
+source("helper.R")
 
 
+setwd(prepped.data.dir)
 
-setwd("~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology/Preliminary data")
 d = read_xlsx("RP_CB Final Analysis .xlsx")
 
 names(d)
@@ -50,16 +56,6 @@ data.frame( d %>% group_by(`Original study title`) %>%
 
 # 
 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                              DATA-WRANGLING                                #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
-# Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
-
-# With internal replications, just pool them (fixed-effects meta-analysis) to get a single estimate
-
-# Exclude pairs with null originals for primary analyses
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
