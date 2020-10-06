@@ -38,23 +38,34 @@ code.dir = paste(root.dir, "Code (git)", sep="/")
 setwd(code.dir)
 source("helper.R")
 
-# nesting levels: paper > experiment > outcome
+# read in paper-, experiment-, and outcome-level data
 setwd(raw.data.dir)
 # we won't actually be using the first of these
 dp = read_xlsx("2020_10_5_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
 de = read_xlsx("2020_10_5_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
 do = read_xlsx("2020_10_5_raw_data.xlsx", sheet = "Outcome level data"); nrow(do)
 
-
-# look at nesting structure
+##### Sanity Checks on Hierarchical Data Structure #####
+# nesting levels: paper > experiment > outcome
 names(de)
-length(unique(de$`Paper #`))  # 53 
-length(unique(de$`Experiment #`))  # 11
-table(de$`Paper #`)
+# exp-level data have 196 unique paper-exp combos:
+uni( paste(de$`Paper #`, de$`Experiment #` ) )
+# and 53 papers
+uni(de$`Paper #`)
 
-table(do$`Paper #`)
-length(unique(do$`Paper #`))  # only 23 papers now
-length(unique(do$`Experiment #`))  # 6
+# outcome-level data have only 50 unique paper-exp combos:
+uni( paste(do$`Paper #`, do$`Experiment #` ) ) 
+# and 23 papers
+uni(do$`Paper #`)
+
+# outcome-level only contains ones with quantitative effect sizes:
+table( is.na(do$`Original effect size`))
+
+# confirm that outcome-level data have all papers from exp-level data for 
+#  which the replication was completed
+expect_equal( uni(de$`Paper #`[de$`Replication experiment completed` == "Yes"]),
+              uni(do$`Paper #`) )
+
 
 ##### Look at What Info Is in Each Dataset #####
 # variables that only appear in one or the other dataset
@@ -68,6 +79,7 @@ names(dp)[ !names(dp) %in% c(names(de), names(do)) ]
 names(do)[ names(do) %in% names(de) ]
 names(dp)[ names(dp) %in% names(de) ]
 
+
 ##### Merge Datasets #####
 d = merge( do, de, by = c("Paper #", "Experiment #"), all=TRUE )
 nrow(d)
@@ -80,7 +92,6 @@ expect_equal( uni(d$`Experiment #`), uni(de$`Experiment #`) )
 d = merge( d, dp, by = "Paper #", all.x = TRUE)
 nrow(d)
 
-table(d$`Effect size type`)
 
 
 ##### Merge Codebooks for Easy Searching #####
@@ -226,22 +237,16 @@ write.csv(d2, "intermediate_dataset_step2.csv")
 
 ################################ CALCULATE SMDS ################################ 
 
-
 # read back in
 setwd(prepped.data.dir)
 setwd("Intermediate work")
 d2 = read.csv("intermediate_dataset_step2.csv")
 
+##### Sanity checks on effect types #####
 
-# Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
-
-d2 %>% group_by(EStype) %>%
-  summarise( mean(repES))
 
 # for the Pearson's r ones, find out if exposure was binary
 #  or continuous
-
-
 t = d2 %>% filter( !is.na(EStype) & EStype == "r" ) %>%
   select(pID,
          eID, 
@@ -264,7 +269,8 @@ write.csv(t, "rows_with_correlations.csv")
 # these make sense
 SMDtypes = c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta")
 View( d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
-        select(pID,
+        select(EStype, 
+               pID,
                eID, 
                oID,
                Statistical.test.applied.to.original.data,
@@ -283,7 +289,41 @@ View( d2 %>% filter( !is.na(EStype) & EStype %in% "Hazard ratio" ) %>%
                origES) )
 # @paper 44: they fit a Cox regression but reported a t-test, and we have a HR?
 
-# check agreement of pvalues with repDirection after doing this
+
+##### ES2: Converted to a scale that can be meta-analyzed, but NOT necessarily SMDs #####
+
+# Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
+
+table(d2$EStype)
+
+# Cohen's d and Glass' delta are comparable
+
+# Cliff's delta is a measure of how often the values in one distribution are larger than the values in a second distribution
+# so is not comparable to the above
+
+# Cohen's dz is a within-subject measure that standardizes by the SD of the CHANGE scores
+#  and so is not comparable
+
+
+toConvert = c("origES", "origLo", "origHi", "repES", "repLo", "repHi")
+
+for (i in toConvert) {
+  newName = paste(i, "2", sep="")
+  
+  # bm: need to handle NAs in the correlations
+  d2[[newName]] = convert_to_ES2( d2[[i]], .EStype = d2$EStype )
+}
+  
+  
+ 
+  
+##### ES3: SMDs where possible; otherwise NA #####
+
+
+
+
+
+# check agreement of pvalues with repDirection after converting to SMDs
 # (because that way null will always be 0)
 
 

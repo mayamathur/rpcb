@@ -1,4 +1,23 @@
 
+################################ EFFECT-SIZE CONVERSIONS ################################
+
+
+convert_to_ES2 = function(x, .EStype){
+  
+  x2 = rep(NA, length(x))
+  
+  x2[ !is.na(.EStype) & .EStype %in% c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta") ] = x[ !is.na(.EStype) & .EStype %in% c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta") ]
+  
+  x2[ !is.na(.EStype) & .EStype == "HR" ] = log(x[ !is.na(.EStype) & .EStype == "Hazard ratio" ])
+  
+  # @ASSUMES R IS PEARSON CORRELATION; NEED TO CHECK IF TRUE:
+  x2[ !is.na(.EStype) & .EStype == "r" ] = r_to_z(x[ !is.na(.EStype) & .EStype == "r" ])
+  
+  # @think again about Cohen's w
+  return(x2)
+}
+
+
 
 ################################ MISCELLANEOUS ################################
 
