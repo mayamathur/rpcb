@@ -48,6 +48,24 @@ r_to_z_NA = function(r){
 
 ################################ MISCELLANEOUS ################################
 
+# read/write intermediate work
+write_interm = function(x, filename){
+  setwd(prepped.data.dir)
+  setwd("Intermediate work")
+  write.csv(x, filename)
+}
+
+read_interm = function(filename){
+  setwd(prepped.data.dir)
+  setwd("Intermediate work")
+  read.csv(filename)
+}
+
+# like View(), but opens the extra tab if global var useView = TRUE
+View2 = function(x){
+  if ( useView == TRUE ) View(x) 
+}
+
 # quick length(unique) equivalent
 uni = function(x){
   length(unique(x))

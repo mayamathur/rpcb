@@ -33,6 +33,9 @@ code.dir = paste(root.dir, "Code (git)", sep="/")
 setwd(code.dir)
 source("helper.R")
 
+# should View2() open tabs?
+useView = FALSE
+
 # read in paper-, experiment-, and outcome-level data
 setwd(raw.data.dir)
 # we won't actually be using the first of these
@@ -157,21 +160,14 @@ d2 = d %>% rename( pID = "Paper #",
                   changesNeededProse = "If modifications were needed for experiment to proceed, what were they?" )
 
 # save intermediate dataset for easy debugging
-setwd(prepped.data.dir)
-setwd("Intermediate work")
-write.csv(d2, "intermediate_dataset_step1.csv")
+write_interm(d2, "intermediate_dataset_step1.csv")
 
 
+################################ 2. RECODE VARIABLES AND MAKE NEW ONES ################################ 
 
-################################ RECODE VARIABLES AND MAKE NEW ONES ################################ 
-
-
-################################ RECODE VARIABLES AND MAKE NEW ONES ################################ 
 
 # read back in
-setwd(prepped.data.dir)
-setwd("Intermediate work")
-d2 = read.csv("intermediate_dataset_step1.csv")
+d2 = read_interm("intermediate_dataset_step1.csv")
 
 # look at the analysis variables
 # easy trick to find analysis variables: their names don't have periods (converted from space upon reading in data)
@@ -216,6 +212,13 @@ table(d2$labsContracted, d2$labType)
 # recode experiment type as animal vs. non-animal
 d2$expAnimal = (d2$expType == "Animal")
 
+# ID for paper-exp-outcome combos
+d2$peoID = paste( "p", d2$pID, "e", d2$eID, "o", d2$oID, sep = "")
+# number of internal replications per outcome
+d2 = d2 %>% group_by(peoID) %>%
+  mutate(nInternal = n())
+
+
 # look at the analysis variables
 # easy trick to find analysis variables: their names don't have spaces
 ( analysisVars = names(d2)[ !whichStrings("[.]", names(d2)) ] )
@@ -227,17 +230,13 @@ CreateTableOne( dat = d2 %>% select(analysisVars) %>%
 
 
 # save intermediate dataset for easy debugging
-setwd(prepped.data.dir)
-setwd("Intermediate work")
-write.csv(d2, "intermediate_dataset_step2.csv")
+write_interm(d2, "intermediate_dataset_step2.csv")
 
 
-################################ CALCULATE SMDS ################################ 
+################################ 3. CALCULATE SMDS ################################ 
 
 # read back in
-setwd(prepped.data.dir)
-setwd("Intermediate work")
-d2 = read.csv("intermediate_dataset_step2.csv")
+d2 = read_interm("intermediate_dataset_step2.csv")
 
 ##### Sanity checks on effect types #####
 
@@ -252,7 +251,7 @@ t = d2 %>% filter( !is.na(EStype) & EStype == "r" ) %>%
          What.statistical.test.was.reported.,
          Original.test.statistic.type,
          origES) 
-View(t)
+View2(t)
 # paper 12 is coded as EStype = r but has none of the other info
 # others are often t-tests, ANOVA, Wilcoxon tests, or Spearman
 # does that mean Spearman's were coded as r just like Pearson?
@@ -265,7 +264,7 @@ write.csv(t, "rows_with_correlations.csv")
 
 # these make sense
 SMDtypes = c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta")
-View( d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
+View2( d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
         select(EStype, 
                pID,
                eID, 
@@ -276,7 +275,7 @@ View( d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
                origES) )
 
 
-View( d2 %>% filter( !is.na(EStype) & EStype %in% "Hazard ratio" ) %>%
+View2( d2 %>% filter( !is.na(EStype) & EStype %in% "Hazard ratio" ) %>%
         select(pID,
                eID, 
                oID,
@@ -309,15 +308,18 @@ d2 %>% filter(!is.na(origES) & !is.na(repES)) %>%
 
 # Cliff's delta is rank-based measure of how often the values in one distribution are larger than
 #  the values in a second distribution, so is not comparable to the above
-# see also https://stats.stackexchange.com/questions/256261/effect-size-and-standard-error-for-mann-whitney-u-statistic
-View(d2 %>% filter(EStype == "Cliff's delta"))
+# linear transformation ofs Mann-Whitney U-stat
+# SE of delta: https://www.real-statistics.com/non-parametric-tests/mann-whitney-test/cliffs-delta/
+View2(d2 %>% filter(EStype == "Cliff's delta"))
 
 # Cohen's dz is a within-subject measure that standardizes by the SD of the CHANGE scores
 #  and so is not comparable
 
 # Cohen's w is a chi-square measure that can be converted IF it was a 2-group design
 # https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0010059
-View(d2 %>% filter(EStype == "Cohen's w"))
+# see also https://stats.stackexchange.com/questions/256261/effect-size-and-standard-error-for-mann-whitney-u-statistic
+# @how did they get SEs for this?
+View2(d2 %>% filter(EStype == "Cohen's w"))
 # paper 9
 
 
@@ -348,23 +350,92 @@ data.frame( d2 %>% group_by(EStype, ES2type) %>%
                          meanNA(repES2) ) )
 
 
+##### Standard errors #####
+
+# @ASK TIM FOR THE ORIGINAL SES; THIS IS JUST A TEMPORARY Z APPROXIMATION:
+# 1.96 * SE * 2 = full CI width
+d2$origSE2 = ( d2$origESHi2 - d2$origESLo2 ) / ( 2 * qnorm(.975) )
+d2$repSE2 = ( d2$repESHi2 - d2$repESLo2 ) / ( 2 * qnorm(.975) )
+
+d2$origVar2 = d2$origSE2^2
+d2$repVar2 = d2$repSE2^2
+
   
 ##### ES3: SMDs where possible; otherwise NA #####
 
+# do me
 
 
+# write intermediate data
+write_interm(d2, "intermediate_dataset_step3.csv")
 
 
+################################ 4. POOL INTERNAL REPLICATIONS ################################ 
 
-# pool internal replications
-
-
-
-
+# read back in
+d2 = read_interm("intermediate_dataset_step3.csv")
 
 
+# number of internal replications per paper-exp-outcome replication
+# used below in sanity checks
+t = d2 %>%
+  filter(!is.na(repES2) & !is.na(origES2)) %>%
+  group_by(peoID) %>%
+  summarise(n = n())
+table(t$n)
+
+##### Pool internal replication(s) via FE meta-analysis #####
+# kept separate from d2 for now to facilitate sanity checks
+# temp has same dimensions as d2
+temp = d2 %>% group_by(pID, eID, oID) %>%
+  mutate( FE = sum(repES2 * 1/repVar2) / sum(1/repVar2),
+          FEvar = 1 / sum(1/repVar2) )
+
+expect_equal( nrow(temp), nrow(d2) )
+
+# # how come this doesn't work??
+# x = d2 %>% group_by(pID, eID, oID) %>%
+#   mutate( FE = as.numeric( rma.uni(yi = repES2, vi = repVar2, method = "FE")$b ) )
+
+# # but this works?
+# # works
+# x = d2 %>% group_by(pID, eID, oID) %>%
+#   mutate( FE = mean(repES2) )
+
+##### Sanity checks #####
+# manually reproduce for ones with 1 replication
+id = t$peoID[t$n == 1]
+# FE estimate should just be the single estimate
+expect_equal(temp$FE[d2$peoID %in% id], d2$repES2[d2$peoID %in% id])
+expect_equal(temp$FEvar[d2$peoID %in% id], d2$repVar2[d2$peoID %in% id])
+
+# check one with 2 internal replications
+id = t$peoID[t$n == 2][1]
+# point estimate
+expect_equal( unique(temp$FE[d2$peoID %in% id]),
+              as.numeric( rma.uni( yi = d2$repES2[d2$peoID == id],
+                                   vi = d2$repVar2[d2$peoID == id],
+                                   method = "FE")$b ) )
+# variance
+expect_equal( unique(temp$FEvar[d2$peoID %in% id]),
+              as.numeric( rma.uni( yi = d2$repES2[d2$peoID == id],
+                                   vi = d2$repVar2[d2$peoID == id],
+                                   method = "FE")$se^2 ) )
+
+# check that FE estimate is always equal to replication estimate
+#  when nInternal = 1, and otherwise is not
+temp$agrees = abs(temp$FE - temp$repES2) < 0.001
+table(temp$agrees, temp$nInternal, useNA = "ifany")
 
 
+###### Overwrite the d2 variables with pooled ones #####
+d2$repES2 = temp$FE
+d2$repVar2 = temp$FEvar
+d2$repSE2 = sqrt(temp$FEvar)
+
+# keep only 1 row per outcome (collapse over internal replications)
+d3 = d2[ !duplicated(d2$peoID), ]
 
 
+write_interm(d3, "intermediate_dataset_step4.csv")
 
