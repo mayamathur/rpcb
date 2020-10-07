@@ -9,11 +9,6 @@
 # merge moderators into all datasets used for analysis
 
 
-# Questions for Tim:
-# - Experiment-level data have 196 rows, but outcome-level have only 191 rows
-#  - Why does outcome-level data have half as many papers as experiment-level? Is that because of non-quantitative ones?
-# - Coded materials requested as dummies. Note that quality of response exists even when no materials were requested
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                              PRELIMINARIES                                #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -168,6 +163,8 @@ write.csv(d2, "intermediate_dataset_step1.csv")
 
 
 
+################################ RECODE VARIABLES AND MAKE NEW ONES ################################ 
+
 
 ################################ RECODE VARIABLES AND MAKE NEW ONES ################################ 
 
@@ -290,32 +287,67 @@ View( d2 %>% filter( !is.na(EStype) & EStype %in% "Hazard ratio" ) %>%
 # @paper 44: they fit a Cox regression but reported a t-test, and we have a HR?
 
 
-##### ES2: Converted to a scale that can be meta-analyzed, but NOT necessarily SMDs #####
+##### Which ones can eventually be converted to Cohen's d type measure? #####
 
 # Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
 
 table(d2$EStype)
 
+# how many can be converted to Cohen's d type SMD? (of the completed pairs only)
+canConvert = c("Cohen's d", "Glass' delta", "Hazard ratio", "r")
+
+d2 %>% filter(!is.na(origES) & !is.na(repES)) %>%
+  group_by(EStype %in% canConvert) %>%
+  summarise( n() )
+
+
 # Cohen's d and Glass' delta are comparable
 
-# Cliff's delta is a measure of how often the values in one distribution are larger than the values in a second distribution
-# so is not comparable to the above
+# HR can be converted to the above
+
+# r can be converted to the above IF it's Pearson r
+
+# Cliff's delta is rank-based measure of how often the values in one distribution are larger than
+#  the values in a second distribution, so is not comparable to the above
+# see also https://stats.stackexchange.com/questions/256261/effect-size-and-standard-error-for-mann-whitney-u-statistic
+View(d2 %>% filter(EStype == "Cliff's delta"))
 
 # Cohen's dz is a within-subject measure that standardizes by the SD of the CHANGE scores
 #  and so is not comparable
 
+# Cohen's w is a chi-square measure that can be converted IF it was a 2-group design
+# https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0010059
+View(d2 %>% filter(EStype == "Cohen's w"))
+# paper 9
 
-toConvert = c("origES", "origLo", "origHi", "repES", "repLo", "repHi")
 
+
+##### ES2: Converted to a scale that can be meta-analyzed, but NOT necessarily SMDs #####
+
+# Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
+
+toConvert = c("origES", "origESLo", "origESHi", "repES", "repESLo", "repESHi")
+
+# convert column-by-column
 for (i in toConvert) {
   newName = paste(i, "2", sep="")
   
-  # bm: need to handle NAs in the correlations
-  d2[[newName]] = convert_to_ES2( d2[[i]], .EStype = d2$EStype )
+  temp = convert_to_ES2( d2[[i]], .EStype = d2$EStype )
+  
+  d2[[newName]] = temp$ES2
+  
+  # this will be the same for each i, so just do it once
+  if (i == toConvert[1]) d2$ES2type = temp$ES2type
 }
   
-  
- 
+# sanity checks
+data.frame( d2 %>% group_by(EStype, ES2type) %>%
+              summarise( meanNA(origES), 
+                         meanNA(origES2),
+                         meanNA(repES),
+                         meanNA(repES2) ) )
+
+
   
 ##### ES3: SMDs where possible; otherwise NA #####
 
@@ -323,9 +355,8 @@ for (i in toConvert) {
 
 
 
-# check agreement of pvalues with repDirection after converting to SMDs
-# (because that way null will always be 0)
 
+# pool internal replications
 
 
 

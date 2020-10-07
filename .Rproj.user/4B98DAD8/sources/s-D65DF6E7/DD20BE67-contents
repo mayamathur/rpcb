@@ -1,29 +1,61 @@
 
 ################################ EFFECT-SIZE CONVERSIONS ################################
 
-
-convert_to_ES2 = function(x, .EStype){
+# convert to scale that's appropriate for meta-analysis (e.g., log-HR instead of HR),
+#  but NOT to a mutually comparable scale across pairs
+convert_to_ES2 = function(x,
+                          .EStype){  
   
-  x2 = rep(NA, length(x))
+  # # test only
+  # x = d2$origES
+  # .EStype = d2$EStype
   
-  x2[ !is.na(.EStype) & .EStype %in% c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta") ] = x[ !is.na(.EStype) & .EStype %in% c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta") ]
+  x2 = type = rep(NA, length(x))
   
-  x2[ !is.na(.EStype) & .EStype == "HR" ] = log(x[ !is.na(.EStype) & .EStype == "Hazard ratio" ])
+  # these stay the same
+  ind = !is.na(.EStype) & .EStype %in% c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta")
+  x2[ind] = x[ind]
+  type[ind] = .EStype[ind]
+  
+  # @need to handle Cohen's w
+  
+  # HR -> log-HR
+  ind = !is.na(.EStype) & .EStype == "Hazard ratio"
+  x2[ind] = log(x[ind])
+  type[ind] = "Log hazard ratio"
   
   # @ASSUMES R IS PEARSON CORRELATION; NEED TO CHECK IF TRUE:
-  x2[ !is.na(.EStype) & .EStype == "r" ] = r_to_z(x[ !is.na(.EStype) & .EStype == "r" ])
+  ind = !is.na(.EStype) & .EStype == "r" 
+  x2[ind] = r_to_z_NA(x[ind] )
+  type[ind] = "Fisher's z"
   
-  # @think again about Cohen's w
-  return(x2)
+  return( data.frame(ES2 = x2,
+                     ES2type = type) )
 }
 
+# convert_to_ES2( x = c(-.2, 0.32, -.67),
+#                 .EStype = c("Cliff's delta", "Hazard ratio", "r") )
 
+
+
+# handles NAs
+r_to_z_NA = function(r){
+  z = NA
+  z[ !is.na(r) ] = r_to_z( r[ !is.na(r) ] )
+  return(z)
+}
+# sr_to_z_NA( c(.22, -.9, NA) )
 
 ################################ MISCELLANEOUS ################################
 
 # quick length(unique) equivalent
 uni = function(x){
   length(unique(x))
+}
+
+# quick mean with NAs removed
+meanNA = function(x){
+  mean(x, na.rm = TRUE)
 }
 
 # return strings containing anything in pattern vector

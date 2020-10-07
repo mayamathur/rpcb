@@ -122,7 +122,7 @@ data.frame( d %>% group_by(`Original study title`) %>%
 # ES of original
 
 
-
+# table(d$`Original test statistic type`)
 
 
 
