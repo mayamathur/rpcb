@@ -1,9 +1,9 @@
 
 # See if the r = Z/sqrt(N) somehow works when r is Wilcoxon instead of Pearson.
 
+###### Helper Fns #####
 
 Z_to_r = function(Z, n) Z/sqrt(n)
-
 
 library(MASS)
 library(expect_equal)
@@ -52,6 +52,7 @@ abs(rConv-rTrue)/rTrue
 
 # marginally std normal
 # empirical correlation same as that seen above
+# i.e., match Pearson's r to the previous point-biserial
 set.seed(seed + 2)
 d = mvrnorm( n = n,
              mu = c(0, 0),
@@ -64,7 +65,7 @@ names(d) = c("x", "y")
 expect_equal( cor(d$x, d$y), rTrue )
 
 
-##### Method 1: get "Z-score" from Wilcoxon p-value and use same conversion #####
+### Method 1: get "Z-score" from Wilcoxon p-value and use same conversion
 # get Z-score from Wilcoxon
 # https://stats.stackexchange.com/questions/133077/effect-size-to-wilcoxon-signed-rank-test
 ( res = wilcox.test(x = d$x, y = d$y) )
@@ -81,13 +82,21 @@ abs(rConv2-rTrue)/rTrue
 
 
 ##### Method 2: get "t-score" from Wilcoxon p-value and use r_equivalent #####
+# should be very equivalent to the above as n -> infty
+
 # Rosenthal & Rubin, pg 494 does exactly this for Mann-Whitney U
-t = abs( qt(p=p, df = n-2) )
+# sanity check using their example on pg 494
+t = abs( qt(p = .008, df = 7) )
+expect_equal(round(t,2), 3.16)
+
+pOne = p/2  # one-tailed p-value
+t = abs( qt(p = pOne, df = n-2) )
+expect_equal( 2 * ( 1 - pt(t, df = n-2) ), p )
 ( rConv3 = sqrt( t^2 / ( t^2 + (n-2) ) ) )
 
 # not close
 rTrue; rConv3
-# relative bias 75%
+# relative bias 95%
 abs(rConv3-rTrue)/rTrue
 
 
