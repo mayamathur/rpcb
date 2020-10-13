@@ -64,7 +64,7 @@ names(d) = c("x", "y")
 expect_equal( cor(d$x, d$y), rTrue )
 
 
-##### Method 1: get "Z-score" from Wilcoxon #####
+##### Method 1: get "Z-score" from Wilcoxon p-value and use same conversion #####
 # get Z-score from Wilcoxon
 # https://stats.stackexchange.com/questions/133077/effect-size-to-wilcoxon-signed-rank-test
 ( res = wilcox.test(x = d$x, y = d$y) )
@@ -80,7 +80,7 @@ rTrue; rConv2
 abs(rConv2-rTrue)/rTrue
 
 
-##### Method 2: get "t-score" from Wilcoxon and use r_equivalent #####
+##### Method 2: get "t-score" from Wilcoxon p-value and use r_equivalent #####
 # Rosenthal & Rubin, pg 494 does exactly this for Mann-Whitney U
 t = abs( qt(p=p, df = n-2) )
 ( rConv3 = sqrt( t^2 / ( t^2 + (n-2) ) ) )
