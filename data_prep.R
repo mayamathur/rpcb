@@ -1,14 +1,5 @@
 
 
-
-
-# With internal replications, just pool them (fixed-effects meta-analysis) to get a single estimate
-
-# Exclude pairs with null originals for primary analyses
-
-# merge moderators into all datasets used for analysis
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                              PRELIMINARIES                                #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -240,7 +231,10 @@ d2 = read_interm("intermediate_dataset_step2.csv")
 
 ##### Sanity checks on effect types #####
 
+# bm
 
+# @IMPORTANT: these are not necessarily Pearson's r! 
+#  some are Wilcoxon, so aren't comparable
 # for the Pearson's r ones, find out if exposure was binary
 #  or continuous
 t = d2 %>% filter( !is.na(EStype) & EStype == "r" ) %>%
@@ -252,11 +246,14 @@ t = d2 %>% filter( !is.na(EStype) & EStype == "r" ) %>%
          Original.test.statistic.type,
          origES) 
 View2(t)
+# original statistical test (note how many are Wilcoxon or Spearman)
+t %>% group_by(Statistical.test.applied.to.original.data) %>%
+  summarise(n())
 # paper 12 is coded as EStype = r but has none of the other info
 # others are often t-tests, ANOVA, Wilcoxon tests, or Spearman
 # does that mean Spearman's were coded as r just like Pearson?
 
-# save this to show Tim
+# @save this to show Tim
 setwd(prepped.data.dir)
 setwd("Intermediate work")
 write.csv(t, "rows_with_correlations.csv")
@@ -264,7 +261,7 @@ write.csv(t, "rows_with_correlations.csv")
 
 # these make sense
 SMDtypes = c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta")
-View2( d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
+t = d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
         select(EStype, 
                pID,
                eID, 
@@ -272,18 +269,26 @@ View2( d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
                Statistical.test.applied.to.original.data,
                What.statistical.test.was.reported.,
                Original.test.statistic.type,
-               origES) )
+               origES)
+View2(t)
+# original statistical test (note: @a lot of NAs here)
+t %>% group_by(Statistical.test.applied.to.original.data) %>%
+  summarise(n())
 
-
-View2( d2 %>% filter( !is.na(EStype) & EStype %in% "Hazard ratio" ) %>%
+# HRs
+t = d2 %>% filter( !is.na(EStype) & EStype %in% "Hazard ratio" ) %>%
         select(pID,
                eID, 
                oID,
                Statistical.test.applied.to.original.data,
                What.statistical.test.was.reported.,
                Original.test.statistic.type,
-               origES) )
-# @paper 44: they fit a Cox regression but reported a t-test, and we have a HR?
+               origES)
+# @paper 44: they fit a Cox regression but reported a t-test, but we have a HR?
+# Tim confirmed this was a mistake on the original authors' part
+# original statistical test (note: @a lot of NAs here)
+t %>% group_by(Statistical.test.applied.to.original.data) %>%
+  summarise(n())
 
 
 ##### Which ones can eventually be converted to Cohen's d type measure? #####
@@ -294,10 +299,14 @@ table(d2$EStype)
 
 # how many can be converted to Cohen's d type SMD? (of the completed pairs only)
 canConvert = c("Cohen's d", "Glass' delta", "Hazard ratio", "r")
+table(d2$EStype %in% canConvert & !is.na(d2$origES) & !is.na(d2$repES) )  # `102 of 337 can convert at this point 
 
-d2 %>% filter(!is.na(origES) & !is.na(repES)) %>%
-  group_by(EStype %in% canConvert) %>%
-  summarise( n() )
+# @TEMP: prepare to remove rank-based correlations
+d2$canConvert = ( d2$EStype %in% c("Cohen's d", "Glass' delta", "Hazard ratio", "r") ) & 
+  ( !d2$Statistical.test.applied.to.original.data %in% c("Spearman's rank correlation", "Wilcoxon signed-rank test") ) & 
+  !is.na(d2$origES) & !is.na(d2$repES)
+# now only 84 can convert after removing rank correlations
+table(d2$canConvert)
 
 
 # Cohen's d and Glass' delta are comparable
@@ -308,7 +317,7 @@ d2 %>% filter(!is.na(origES) & !is.na(repES)) %>%
 
 # Cliff's delta is rank-based measure of how often the values in one distribution are larger than
 #  the values in a second distribution, so is not comparable to the above
-# linear transformation ofs Mann-Whitney U-stat
+# linear transformation of Mann-Whitney U-stat
 # SE of delta: https://www.real-statistics.com/non-parametric-tests/mann-whitney-test/cliffs-delta/
 View2(d2 %>% filter(EStype == "Cliff's delta"))
 
@@ -328,6 +337,7 @@ View2(d2 %>% filter(EStype == "Cohen's w"))
 
 # Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
 
+# statistics that should be converted to ES2 scale
 toConvert = c("origES", "origESLo", "origESHi", "repES", "repESLo", "repESHi")
 
 # convert column-by-column
@@ -349,6 +359,8 @@ data.frame( d2 %>% group_by(EStype, ES2type) %>%
                          meanNA(repES),
                          meanNA(repES2) ) )
 
+table(d2$ES2type)
+
 
 ##### Standard errors #####
 
@@ -363,8 +375,23 @@ d2$repVar2 = d2$repSE2^2
   
 ##### ES3: SMDs where possible; otherwise NA #####
 
-# do me
+# do me later
 
+# convert 
+
+
+
+# convert column-by-column
+for (i in toConvert) {
+  newName = paste(i, "2", sep="")
+  
+  temp = convert_to_ES2( d2[[i]], .EStype = d2$EStype )
+  
+  d2[[newName]] = temp$ES2
+  
+  # this will be the same for each i, so just do it once
+  if (i == toConvert[1]) d2$ES2type = temp$ES2type
+}
 
 # write intermediate data
 write_interm(d2, "intermediate_dataset_step3.csv")
@@ -435,7 +462,6 @@ d2$repSE2 = sqrt(temp$FEvar)
 
 # keep only 1 row per outcome (collapse over internal replications)
 d3 = d2[ !duplicated(d2$peoID), ]
-
 
 write_interm(d3, "intermediate_dataset_step4.csv")
 

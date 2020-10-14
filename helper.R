@@ -38,13 +38,152 @@ convert_to_ES2 = function(x,
 
 
 
+# convert to SMD
+convert_to_ES3 = function(x,
+                          .ES2type){  
+  
+  # test only
+  x = d2$ES2
+  .ES2type = d2$ES2type
+  
+  x2 = type = rep(NA, length(x))
+  
+  # these are already SMDs
+  # @though note that we're allowing Cohen's dz here
+  ind = !is.na(.EStype) & .EStype %in% c("Cohen's d", "Cohen's dz", "Glass' delta")
+  x2[ind] = x[ind]
+  type[ind] = "SMD"
+  
+  # convert log-HRs
+  ind = !is.na(.EStype) & .EStype == "Log hazard ratio"
+  x2[ind] = 
+  type[ind] = "Log hazard ratio"
+  
+  # @ASSUMES R IS PEARSON CORRELATION; NEED TO CHECK IF TRUE:
+  ind = !is.na(.EStype) & .EStype == "r" 
+  x2[ind] = r_to_z_NA(x[ind] )
+  type[ind] = "Fisher's z"
+  
+  return( data.frame(ES2 = x2,
+                     ES2type = type) )
+}
+
+
+# UPDATE THIS IN METAUTILITY
+# Pearson's r to Fisher's z
+# NOT the Z-score
 # handles NAs
 r_to_z_NA = function(r){
-  z = NA
+  z = rep(NA, length(r))
   z[ !is.na(r) ] = r_to_z( r[ !is.na(r) ] )
   return(z)
 }
-# sr_to_z_NA( c(.22, -.9, NA) )
+# r_to_z_NA( c(.22, -.9, NA) )
+
+
+
+# ALSO PUT IN METAUTILITY
+# hi: upper CI limit
+logHR_to_logOR = function(logHR,
+                          rareY = rep(FALSE, length(logOR)),
+                          lo = NA,
+                          hi = NA){
+  
+  # test only
+  logHR = c(NA, NA, log(1.03), log(2), log(2))
+  rareY = c(NA, NA, FALSE, TRUE, FALSE)
+  lo = c(NA, NA, log(.8), log(1.5), log(1.5))
+  hi = rep(NA, length(logHR))
+  
+  d = data.frame( logHR,
+                  lo,
+                  hi,
+                  rareY)
+
+  
+  ##### Rare Outcome #####
+  # if outcome is rare, no transformation needed
+  d[ eqNA(d$rareY == TRUE), c("logOR", "loLogOR", "hiLogOR") ] = d[ eqNA(d$rareY == TRUE), c("logHR", "lo", "hi") ]
+  
+
+  ##### Common Outcome #####
+  # if outcome is common, use TVW's two transformations
+  # logHR ->(Biometrics Thm2 conversion) logOR ->(sqrt) logRR
+  logHR_to_logRR_common = Vectorize( function(logHR){
+    if (is.na(logHR)) return(NA)
+    log( ( 1 - 0.5^sqrt( exp(logHR) ) ) / ( 1 - 0.5^sqrt( 1 / exp(logHR) ) ) )
+  } )
+  
+  # first convert logHR -> logRR via 
+  #  TVW's Biometrics conversion (Thm 2)
+  d[ eqNA(d$rareY == FALSE), c("logRR", "loLogRR", "hiLogRR") ] = logHR_to_logRR_common( d[ eqNA(d$rareY == TRUE), c("logHR", "lo", "hi") ] )
+  
+  # now convert the RRs to ORs via square-root
+  d[ eqNA(d$rareY == FALSE), c("logOR", "loLogOR", "hiLogOR") ] = sqrt( exp( d[ eqNA(d$rareY == TRUE), c("logOR", "loLogOR", "hiLogOR") ] ) )
+  
+  ##### Get Variance from CI #####
+  # use either lower or upper limit, depending on what's available
+  d$lim = d$loLogOR
+  d$lim[ is.na(d$loLogOR) ] = d$hiLogOR
+  
+  
+  
+}
+
+
+
+# ALSO PUT IN METAUTILITY
+# tests proposition x
+# but returns FALSE instead of NA if x itself is NA
+eqNA = function(x){
+  !is.na(x) & x == 1
+}
+eqNA(NA == 5)
+
+
+# ALSO PUT IN METAUTILITY
+# calculates variance (Z- or t-based) given CI limit and point estimate
+# ci.lim can be upper or lower
+# if df not provided, assumes we're using Z
+ci_to_var = Vectorize( function(est, ci.lim, df = NA){
+  
+  if ( is.na(est) | is.na(ci.lim) ) return(NA)
+  # Z or t-stat
+  stat = abs(est - ci.lim)
+  
+  if ( is.na(df) ) crit = qnorm(.975)
+  if ( !is.na(df) ) crit = qt(p = 0.975, df = df)
+  
+  se = abs(est - ci.lim) / crit
+  
+  return(se^2)
+} )
+# # sanity check
+# res = ci_to_var( est = c(1.05, NA),
+#                  ci.lim = c(1.15, NA),
+#                  df = c(10, NA) )
+# expect_equal( 1.05 + qt(.975, df = 10) * sqrt(res[1]), 1.15 )
+
+
+
+# test only
+est = 1.05
+ci.lim = 1.15
+df = 10
+
+# uses square-root transformation (assumes common outcome; otherwise conservative)
+logOR_to_logRR = function( logOR,
+                           varlogOR ) {
+  logRR = log( sqrt( exp(logOR) ) )
+
+  # delta method
+  # let x = logOR
+  # derivative of log( sqrt( exp(x) ) ) = 0.5
+  varlogRR = 0.5^2 * varlogOR
+  return( list(logRR = logRR, varlogRR = varlogRR) )
+}
+
+
 
 ################################ MISCELLANEOUS ################################
 
