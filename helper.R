@@ -83,6 +83,9 @@ r_to_z_NA = function(r){
 
 
 # ALSO PUT IN METAUTILITY
+# logHR to logOR by way of logRR
+# if rare, it's easy because HR \approx RR
+# if common, use TVW's two conversions
 # hi: upper CI limit
 # goal of the fn is to fill in logOR and varLogRR for all entries
 #  the other cols that get added in the interim are just intermediate steps
@@ -132,8 +135,7 @@ logHR_to_logOR = function(logHR,
     return(logOR)
   } )
   #logRR_to_logOR_common( c(log(1.4), log(.745), NA) )
-  
-  
+
   
   # first convert logHR -> logRR via 
   #  TVW's Biometrics conversion (Thm 2)
@@ -178,6 +180,59 @@ logHR_to_logOR = function(logHR,
 # expect_equal( res$loLogOR[3], log( sqrt( exp( res$loLogRR[3] ) ) ) )  # check OR limit
 # expect_equal( ( (res$logOR[3] - res$loLogOR[3]) / qnorm(.975) )^2, res$varLogOR[3] )
 
+# Hasselblad & Hedges conversion that we think only works for common outcomes
+logOR_to_SMD = function(logOR,
+                          lo = NA,
+                          hi = NA){
+ 
+  d = data.frame( logOR,
+                  lo,
+                  hi)
+
+
+  # purpose of the internal fn here is to handle NAs in the above dataframe
+  .logOR_to_SMD = Vectorize( function(logOR){
+    
+    SMD = rep(NA, length(logOR))
+    
+    SMD[ !is.na(logOR) ] = ( sqrt(3) / pi ) * logOR[ !is.na(logOR) ]
+    
+    return(SMD)
+  } )
+  #logHR_to_logRR_common( c(log(1.4), log(.745), NA) )
+
+  
+  d[ c("SMD", "loSMD", "hiSMD") ] = .logOR_to_SMD( d[ c("logOR", "lo", "hi") ] )
+  
+ 
+  ##### Get Variance from CI #####
+  # use either lower or upper limit, depending on what's available
+  d$lim = d$loSMD
+  d$lim[ is.na(d$loSMD) ] = d$hiSMD[ is.na(d$loSMD) ]
+  
+  d$varSMD[ !is.na(d$lim) ] = ci_to_var( est = d$SMD[ !is.na(d$lim) ],
+                                           ci.lim = d$lim[ !is.na(d$lim) ] )
+  
+  return(d)
+}
+
+
+# sanity check
+logOR = c(log(1.03), log(.75), NA)
+lo = c(log(.8), NA, NA)
+hi = c(NA, log(.9), NA)
+res = logOR_to_SMD( logOR, lo, hi )
+
+expect_equal( res$SMD[1], sqrt(3)/pi * res$logOR[1] )
+expect_equal( res$loSMD[1], sqrt(3)/pi * res$lo[1] )
+
+# instead of what the fn is doing (i.e., convert CI limit itself), try getting var of
+#  OR first from its CI limit
+varLogOR = ( ( res$logOR[1] - res$lo[1] ) / qnorm(.975) )^2
+expect_equal( res$varSMD[1], sqrt(3)/pi * varLogOR )
+# @ WHY SO DIFFERENT?
+
+
 
 
 # ALSO PUT IN METAUTILITY
@@ -213,23 +268,11 @@ ci_to_var = Vectorize( function(est, ci.lim, df = NA){
 # expect_equal( 1.05 + qt(.975, df = 10) * sqrt(res[1]), 1.15 )
 
 
-
 # test only
 est = 1.05
 ci.lim = 1.15
 df = 10
 
-# uses square-root transformation (assumes common outcome; otherwise conservative)
-logOR_to_logRR = function( logOR,
-                           varlogOR ) {
-  logRR = log( sqrt( exp(logOR) ) )
-
-  # delta method
-  # let x = logOR
-  # derivative of log( sqrt( exp(x) ) ) = 0.5
-  varlogRR = 0.5^2 * varlogOR
-  return( list(logRR = logRR, varlogRR = varlogRR) )
-}
 
 
 
