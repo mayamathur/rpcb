@@ -84,16 +84,18 @@ r_to_z_NA = function(r){
 
 # ALSO PUT IN METAUTILITY
 # hi: upper CI limit
+# goal of the fn is to fill in logOR and varLogRR for all entries
+#  the other cols that get added in the interim are just intermediate steps
 logHR_to_logOR = function(logHR,
                           rareY = rep(FALSE, length(logOR)),
                           lo = NA,
                           hi = NA){
   
-  # test only
-  logHR = c(NA, NA, log(1.03), log(2), log(2))
-  rareY = c(NA, NA, FALSE, TRUE, FALSE)
-  lo = c(NA, NA, log(.8), log(1.5), log(1.5))
-  hi = rep(NA, length(logHR))
+  # # test only
+  # logHR = c(NA, NA, log(1.03), log(2), log(2))
+  # rareY = c(NA, NA, FALSE, TRUE, FALSE)
+  # lo = c(NA, NA, log(.8), NA, log(1.5))
+  # hi = c(NA, NA, NA, log(2.5), NA)
   
   d = data.frame( logHR,
                   lo,
@@ -108,27 +110,73 @@ logHR_to_logOR = function(logHR,
 
   ##### Common Outcome #####
   # if outcome is common, use TVW's two transformations
-  # logHR ->(Biometrics Thm2 conversion) logOR ->(sqrt) logRR
+  # logHR ->(Biometrics Thm2 conversion) logOR ->(sqrt conversion) logRR
   logHR_to_logRR_common = Vectorize( function(logHR){
-    if (is.na(logHR)) return(NA)
-    log( ( 1 - 0.5^sqrt( exp(logHR) ) ) / ( 1 - 0.5^sqrt( 1 / exp(logHR) ) ) )
+    
+    logRR = rep(NA, length(logHR))
+    
+    logRR[ !is.na(logHR) ] = log( ( 1 - 0.5^sqrt( exp(logHR[ !is.na(logHR) ]) ) ) / ( 1 - 0.5^sqrt( 1 / exp(logHR[ !is.na(logHR) ]) ) ) )
+
+    return(logRR)
   } )
+  #logHR_to_logRR_common( c(log(1.4), log(.745), NA) )
+  
+  
+  
+  logRR_to_logOR_common = Vectorize( function(logRR){
+    
+    logOR = rep(NA, length(logRR))
+    
+    logOR[ !is.na(logRR) ] = log( sqrt( exp( logRR[ !is.na(logRR) ] ) ) )
+    
+    return(logOR)
+  } )
+  #logRR_to_logOR_common( c(log(1.4), log(.745), NA) )
+  
+  
   
   # first convert logHR -> logRR via 
   #  TVW's Biometrics conversion (Thm 2)
-  d[ eqNA(d$rareY == FALSE), c("logRR", "loLogRR", "hiLogRR") ] = logHR_to_logRR_common( d[ eqNA(d$rareY == TRUE), c("logHR", "lo", "hi") ] )
+  d[ eqNA(d$rareY == FALSE), c("logRR", "loLogRR", "hiLogRR") ] = logHR_to_logRR_common( d[ eqNA(d$rareY == FALSE), c("logHR", "lo", "hi") ] )
   
   # now convert the RRs to ORs via square-root
-  d[ eqNA(d$rareY == FALSE), c("logOR", "loLogOR", "hiLogOR") ] = sqrt( exp( d[ eqNA(d$rareY == TRUE), c("logOR", "loLogOR", "hiLogOR") ] ) )
+  #     @bm: this is hitting an error
+  d[ eqNA(d$rareY == FALSE), c("logOR", "loLogOR", "hiLogOR") ] = logRR_to_logOR_common( d[ eqNA(d$rareY == FALSE), c("logRR", "loLogRR", "hiLogRR") ] ) 
   
   ##### Get Variance from CI #####
   # use either lower or upper limit, depending on what's available
   d$lim = d$loLogOR
-  d$lim[ is.na(d$loLogOR) ] = d$hiLogOR
+  d$lim[ is.na(d$loLogOR) ] = d$hiLogOR[ is.na(d$loLogOR) ]
   
+  d$varLogOR[ !is.na(d$lim) ] = ci_to_var( est = d$logOR[ !is.na(d$lim) ],
+                                           ci.lim = d$lim[ !is.na(d$lim) ] )
   
-  
+  return(d)
 }
+
+# # sanity checks:
+# # test only
+# logHR = c(NA, NA, log(1.03), log(2), log(2))
+# rareY = c(NA, NA, FALSE, TRUE, FALSE)
+# lo = c(NA, NA, log(.8), NA, log(1.5))
+# hi = c(NA, NA, NA, log(2.5), NA)
+# res = logHR_to_logOR( logHR, rareY, lo, hi )
+# 
+# # rare
+# expect_equal( res$logHR[4], res$logOR[4] )
+# expect_equal( ( (res$hi[4] - res$logHR[4]) / qnorm(.975) )^2, res$varLogOR[4] )
+# 
+# # common
+# term = 0.5^sqrt( exp(res$logHR[3]) )
+# term2 = 0.5^sqrt( 1/exp(res$logHR[3]) )
+# expect_equal( res$logRR[3], log( (1 - term) / (1 - term2) ) )  # check RR
+# expect_equal( res$logOR[3], log( sqrt( exp( res$logRR[3] ) ) ) )  # check OR
+# 
+# term = 0.5^sqrt( exp(res$lo[3]) )
+# term2 = 0.5^sqrt( 1/exp(res$lo[3]) )
+# expect_equal( res$loLogRR[3], log( (1 - term) / (1 - term2) ) )  # check RR limit
+# expect_equal( res$loLogOR[3], log( sqrt( exp( res$loLogRR[3] ) ) ) )  # check OR limit
+# expect_equal( ( (res$logOR[3] - res$loLogOR[3]) / qnorm(.975) )^2, res$varLogOR[3] )
 
 
 
