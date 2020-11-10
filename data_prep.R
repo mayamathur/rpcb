@@ -185,6 +185,10 @@ d2$origSignif = d2$origPval < 0.05
 table(d2$repSignif, d2$repDirection)
 table(d2$origSignif, d2$origDirection)
 
+# recode direction variables
+d2$origDirection[ d2$origDirection == "" ] = NA
+d2$repDirection[ d2$repDirection == "" ] = NA
+
 # make dummies from variables coded as comma-separated categories
 # @IMPORTANT: note that response quality coding exists even if no materials were requested
 table( is.na(d2$materialsRequested), d2$responseQuality )  
@@ -580,6 +584,13 @@ d3e = d3e[ !duplicated(d2$peID), ]
 # materialsRequested = "Key materials asked to be shared",
 # responseQuality
 
+# make exclusions
+# @@check with Tim
+# remove pairs for which we have no info at all about original
+# we also decided to exclude null originals
+# 139 rows total after this
+d3 = d3 %>% filter( !is.na(origDirection ) & origDirection == "Positive" )
+nrow(d3)
 
 
 # first level of granularity: outcome-level
@@ -590,5 +601,5 @@ fwrite(d3, "prepped_outcome_level_data.csv")
 # @@not done yet
 
 
-
+# calculate prediction intervals from original
 

@@ -1,4 +1,174 @@
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+#                                   ANALYSIS HELPER                                 #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
+# x is row of dataframe
+analyze_one_row = function(origES2,
+                           origVar2, 
+                           repES2,
+                           repVar2,
+                           ES2type){
+  
+  # test only
+  #x = dat[1,]
+  
+  if( is.na(origES2) | is.na(origVar2) | is.na(repES2) | is.na(repVar2) ) {
+    return( data.frame( pw.PILo = NA,
+                        pw.PIHi = NA,
+                        pw.PIRepInside = NA,
+                        
+                        pw.PILo.sens = NA,
+                        pw.PIHi.sens = NA,
+                        pw.PIRepInside.sens = NA,
+                        
+                        pw.Porig = NA,
+                        pw.PorigSens = NA,
+                        
+                        pw.ratio = NA,
+                        
+                        pw.PsigAgree1 = NA,
+                        
+                        pw.FEest = NA,
+                        pw.FEvar = NA,
+                        pw.FElo = NA,
+                        pw.FEhi = NA
+    ) )
+  }
+  
+  # prediction interval with t2 = 0
+  predInt = pred_int( yio = origES2,
+                      vio = origVar2,
+                      yir = repES2,
+                      vir = repVar2 )
+  
+  # Porig with t2 = 0
+  Porig = p_orig( yio = origES2,
+                  vio = origVar2,
+                  yr = repES2,
+                  vyr = repVar2,
+                  t2 = 0 )
+  
+  # for sensitivity analyses:s
+  # prediction interval and Porig with tau = 0.13
+  # from Olssen-Collentine
+  # only use truly comparable SMDs for this
+  if ( !is.na(ES2type) & ES2type %in% c("Cohen's d", "Glass' delta") ){
+    #if ( ES2type %in% c("Cohen's d", "Glass' delta") ) {
+      Porig.sens = p_orig( yio = origES2,
+                           vio = origVar2,
+                           yr = repES2,
+                           vyr = repVar2,
+                           t2 = sqrt(.13) )
+      
+      # prediction interval
+      # as in Replicate::pred_int, but adding in t2 here:
+      yio = origES2
+      vio = origVar2
+      yir = repES2
+      vir = repVar2
+      pooled.SE = sqrt(vio + vir + .13)
+      PILo.sens = yio - qnorm(1 - .05/2) * pooled.SE
+      PIHi.sens = yio + qnorm(1 - .05/2) * pooled.SE
+      PIinside.sens = (yir > PILo.sens) & (yir < PIHi.sens)
+      
+    #}
+  } else {
+    Porig.sens = PILo.sens = PIHi.sens = PIinside.sens = NA
+  }
+  
+  
+  # P(replication p < 0.05) - Mathur & VanderWeele
+  PsigAgree1 = prob_signif_agree(yio = origES2,
+                                 vio = origVar2,
+                                 vir = repVar2,
+                                 t2 = 0,
+                                 null = 0)
+  
+  
+  # @@CALCULATING POWER IS GOING TO BE A PROBLEM UNLESS WE CAN DO IT FOR ONLY 2-GROUP DESIGNS
+  #  AND MAYBE CORRELATIONS
+  # # P(replication p < 0.05) in counterfactual world in which the true 
+  # #  effect size in replication and original is equal to the effect size for which it would
+  # #  have had 80% power
+  # # i.e., this is just the power to detect that effect size given replication's variance
+  # power.t.test( )
+  # 
+  # # the df are only approximate
+  # # @@ could use 
+  # if ( !is.na(origN) ) {
+  #   df = origN - 2
+  #   tcrit = qt(0.975, df = df)
+  # } else {
+  #   stop("Found a case with origN NA, so should use 1.96 here, I guess (also need to impute df)")
+  # }
+  # 
+  # # mu: the true effect
+  # # we will solve for it
+  # pwr_at_mu = function(mu){
+  #   pt( q = tcrit - mu / sqrt(origVar2),
+  #       df = df,
+  #       lower.tail = FALSE ) +
+  #     pt( q = -tcrit - mu / sqrt(origVar2),
+  #         df = df,
+  #         lower.tail = TRUE )
+  # }
+  # 
+  # # sanity check
+  # expect_equal( 0.05, pwr_at_mu(0) )
+  # 
+  # 
+  # pwr_at_mu(15)
+  # power.t.test( n = origN,
+  #               delta = 15,
+  #               sd = sqrt(origVar2) * sqrt(origN) )$power
+  # 
+  # # solve for counterfactual mu
+  # mu.cfactual = uniroot( function(.mu) eval( pwr_cfactual(.mu) ) = 0.80 )
+  
+  # FE meta-analysis of original and replications
+  #bm
+  FEmod = rma.uni( yi = c(origES2, repES2),
+                   vi = c(origVar2, repVar2),
+                   method = "FE")
+  
+  
+  #return as dataframe for mutate joys
+  # "pw" prefix for "pairwise" metrics
+  return( data.frame( pw.PILo = predInt$int.lo,
+                      pw.PIHi = predInt$int.hi,
+                      pw.PIRepInside = predInt$rep.inside,
+                      
+                      pw.PILo.sens = PILo.sens,
+                      pw.PIHi.sens = PIHi.sens,
+                      pw.PIRepInside.sens = PIinside.sens,
+                      
+                      pw.Porig = Porig, 
+                      pw.PorigSens = Porig.sens,
+                      
+                      pw.ratio = origES2 / repES2,
+                      
+                      pw.PsigAgree1 = PsigAgree1,
+                      
+                      pw.FEest = as.numeric( FEmod$b ),
+                      pw.FEvar = as.numeric( FEmod$se^2 ),
+                      pw.FElo = as.numeric( FEmod$ci.lb ), 
+                      pw.FEhi = as.numeric( FEmod$ci.ub )
+  ) )
+}
+
+x = dat[58,]
+analyze_one_row(x$origES2,
+                x$origVar2,
+                x$repES2,
+                x$repVar2,
+                x$ES2type)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+#                                   DATA-PREP HELPER                                #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
 ################################ EFFECT-SIZE CONVERSIONS ################################
 
 # convert to scale that's appropriate for meta-analysis (e.g., log-HR instead of HR),
@@ -375,10 +545,10 @@ robu2 = function(yi, vi) {
                         var = as.numeric(mod$reg_table$SE)^2 ) )
   }
 }
-# test with one row
-robu2( d3[ d3$peID == "p15e1", "repES2" ], d3[ d3$peID == "p15e1", "repVar2" ] )
-# test with multiple rows
-robu2( d3[ d3$peID == "p16e1", "repES2" ], d3[ d3$peID == "p16e1", "repVar2" ] )
+# # test with one row
+# robu2( d3[ d3$peID == "p15e1", "repES2" ], d3[ d3$peID == "p15e1", "repVar2" ] )
+# # test with multiple rows
+# robu2( d3[ d3$peID == "p16e1", "repES2" ], d3[ d3$peID == "p16e1", "repVar2" ] )
 
 
 

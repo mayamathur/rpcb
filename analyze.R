@@ -12,6 +12,7 @@ library(ggplot2)
 library(MetaUtility)
 library(robumeta)
 library(testthat)
+library(Replicate)
 
 root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology"
 raw.data.dir = paste(root.dir, "Raw data", sep="/")
@@ -19,31 +20,38 @@ prepped.data.dir = paste(root.dir, "Prepped data", sep="/")
 code.dir = paste(root.dir, "Code (git)", sep="/")
 results.dir = paste(root.dir, "Results from R", sep="/")
 
+options(scipen=999)
+
 setwd(code.dir)
 source("helper.R")
 
 
 setwd(prepped.data.dir)
+d = fread("prepped_outcome_level_data.csv")
 
-d = read_xlsx("RP_CB Final Analysis .xlsx")
+# read in codebook for easy searching
+setwd(raw.data.dir)
+cd = fread("codebook_merged.csv")
 
-names(d)
-
-
-dim(d)  # 258
-
-table(d$`Replication attempted`)  # 233
-table(d$`Experiment completed`) # 190
-
-d %>% filter( `Experiment completed` == "Yes" ) %>%
-  summarise( length(unique(`Original study title`)),
-             mean(`Number of lab(s) contracted for the entire study`) )
-
-data.frame( d %>% group_by(`Original study title`) %>%
-              summarise( n(),
-                         comp = mean(`Experiment completed` == "Yes"),
-                         expN0 = max(`Experiment #`, na.rm = TRUE),
-                         max(`Study #`, na.rm = TRUE) ) )
+# d = read_xlsx("RP_CB Final Analysis .xlsx")
+# 
+# names(d)
+# 
+# 
+# dim(d)  # 258
+# 
+# table(d$`Replication attempted`)  # 233
+# table(d$`Experiment completed`) # 190
+# 
+# d %>% filter( `Experiment completed` == "Yes" ) %>%
+#   summarise( length(unique(`Original study title`)),
+#              mean(`Number of lab(s) contracted for the entire study`) )
+# 
+# data.frame( d %>% group_by(`Original study title`) %>%
+#               summarise( n(),
+#                          comp = mean(`Experiment completed` == "Yes"),
+#                          expN0 = max(`Experiment #`, na.rm = TRUE),
+#                          max(`Study #`, na.rm = TRUE) ) )
 
 
 #################################### 
@@ -56,6 +64,8 @@ data.frame( d %>% group_by(`Original study title`) %>%
 
 # 
 
+# with eye toward functionizing everything later (so we can do for outcome- and exp-level):
+dat = d
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -64,8 +74,13 @@ data.frame( d %>% group_by(`Original study title`) %>%
 
 # Percent sign agreement: The percentage of replications whose estimates agree in direction with the original study. This could be heuristically compared to the 50% that would be expected by chance if the null holds exactly in every replication (i.e., no effect heterogeneity) and conditional on all originals’ being positive in sign.
 
+table(dat$origDirection, dat$repDirection, useNA = "ifany")
+
+mean( dat$repDirection == "Positive" )
+sum( dat$repDirection == "Positive" )
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                       MAIN PAIRWISE METRICS (COMPLETED QUANT PAIRS)                                #
+#              MAIN PAIRWISE METRICS (COMPLETED QUANT PAIRS)                        #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 ################################ TO CALCULATE FOR EACH PAIR ################################ 
@@ -77,11 +92,10 @@ data.frame( d %>% group_by(`Original study title`) %>%
 
 # Primary: Ratio of original to replication study estimates
 
-# Secondary: Replication p < .05 with 2 expectation benchmarks
+# Secondary: P(Replication p < .05) with 2 expectation benchmarks
 #  - from JRSSA paper
 #  - the true effect size in each original is equal to the effect size for which it would
 #   have had 80% power.
-
 
 # Porig with assumed zero heterogeneity
 
@@ -91,7 +105,38 @@ data.frame( d %>% group_by(`Original study title`) %>%
 # Porig and pred interval with imputed heterogeneity: If there is moderate or high within-pair effect heterogeneity, this could make the original studies appear less consistent with the replications than they truly are. As a sensitivity analysis, we will impute the average heterogeneity estimate from Olsson-Collentine, et al. (in press), which was tau=0.13 on the SMD scale, and use this to re-calculate Porig for each pair. These values of Porig will likely be large (i.e., indicating better consistency) than those from main analyses.
 
 
+# dataset has already been aggregated to either the outcome- or the experiment-level
+dat = dat %>% 
+  rowwise() %>% 
+  mutate( analyze_one_row(origES2,
+                          origVar2, 
+                          repES2,
+                          repVar2,
+                          ES2type) )
+
+# quick look at results
+# stringsWith( pattern = "pw", x = names(dat) )
+# 
+# takeMean = c("pw.PIRepInside",
+#              "pw.PIRepInside.sens",
+#              "pw.Porig",
+#              "pw.PorigSens",
+#              "pw.ratio",
+#              "pw.PsigAgree1",
+#              "pw.FEest")
+# this is broken:
+# res = dat %>% select(takeMean) %>%
+#   mutate( across( .cols = everything(),
+#                   .fns = mean) ) 
+
+#bm
+colMeans( dat %>% select(takeMean), na.rm = TRUE )
+
+
 ################################ SUMMARIES AFTER THE ABOVE ################################ 
+
+# FOREST PLOT
+
 
 
 # TABLE of these metrics at the experiment level (~50 rows)
