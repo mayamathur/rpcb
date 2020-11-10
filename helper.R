@@ -291,7 +291,10 @@ cohen_d = function( x2, y ) {
 
 
 
-################################ MISCELLANEOUS ################################
+
+
+
+################################ MISCELLANEOUS FORMATTING AND CONVENIENCE FNS ################################
 
 # read/write intermediate work
 write_interm = function(x, filename){
@@ -346,7 +349,36 @@ searchBook = function(pattern){
                    whichStrings( tolower(pattern), tolower(cd$`Description of variable`) )
   View(cd[ rows, ])
 }
-#searchBook("p value") 
+#searchBook("p value")
+
+
+# fit robumeta with independent effects and return only pooled point estimate and variance
+#  handles case where data have only 1 row
+robu2 = function(yi, vi) {
+  
+  dat = data.frame( yi, vi )
+  
+  # handle case with 1 row in dat
+  if ( nrow(dat) == 1 ) {
+    return( data.frame( est = yi, 
+                        var = vi ) )
+  }
+  
+  if ( nrow(dat) > 1 ) {
+    mod = robu( yi ~ 1,
+                var.eff.size = vi,
+                studynum = 1:length(yi),
+                data = dat,
+                small = TRUE)
+    
+    return( data.frame( est = as.numeric(mod$b.r), 
+                        var = as.numeric(mod$reg_table$SE)^2 ) )
+  }
+}
+# test with one row
+robu2( d3[ d3$peID == "p15e1", "repES2" ], d3[ d3$peID == "p15e1", "repVar2" ] )
+# test with multiple rows
+robu2( d3[ d3$peID == "p16e1", "repES2" ], d3[ d3$peID == "p16e1", "repVar2" ] )
 
 
 

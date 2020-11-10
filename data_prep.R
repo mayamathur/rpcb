@@ -15,6 +15,8 @@ library(testthat)
 library(data.table)
 library(tableone)
 library(qdapTools)
+library(metafor)
+
 
 root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology"
 raw.data.dir = paste(root.dir, "Raw data", sep="/")
@@ -26,6 +28,9 @@ source("helper.R")
 
 # should View2() open tabs?
 useView = FALSE
+
+# should we run sanity checks?
+run.sanity = FALSE
 
 # read in paper-, experiment-, and outcome-level data
 setwd(raw.data.dir)
@@ -107,48 +112,48 @@ cd = fread("codebook_merged.csv")
 # moderators: put "mod" in their name for ease of analysis 
 
 d2 = d %>% rename( pID = "Paper #",
-                  eID = "Experiment #",
-                  oID = "Effect #",
-                  internalID = "Internal replication #",
-                  
-                  testReported = "Was a statistical test reported in the original paper?.x",
-                  
-                  origDirection = "Expected difference based on the original paper?",
-                  repDirection = "Observed difference in replication?",
-                  
-                  origN = "Original sample size",
-                  repN = "Replication sample size",
-                  
-                  # point estimates that were sometimes available even when 
-                  #  couldn't calculate effect sizes
-                  origRawDiff = "Original point difference (for representative data)",
-                  repRawDiff = "Replication raw difference (if original reported representative data)",
-                  
-                  # main effect sizes for us, but not yet on same scale
-                  origES = "Original effect size",
-                  origESLo = "Original lower CI",
-                  origESHi = "Original upper CI",
-                  origdf1 = "Original df1",
-                  origdf2 = "Original df2",
-                  origPval = "Original p value",
-                  
-                  repES = "Replication effect size",
-                  repESLo = "Replication lower CI",
-                  repESHi = "Replication upper CI",
-                  repdf1 = "Replication df1",
-                  repdf2 = "Replication df2",
-                  repPval = "Replication p value",
-                  
-                  EStype = "Effect size type",
-                  
-                  # raw moderators
-                  expType = "Type of experiment",
-                  # has strings that can be used to determine type of lab:
-                  labsContracted = "Lab(s) contracted for the experiment",
-                  materialsRequested = "Key materials asked to be shared",
-                  responseQuality = "Quality of response from original authors",
-                  # when this is NA, no mods were needed:
-                  changesNeededProse = "If modifications were needed for experiment to proceed, what were they?" )
+                   eID = "Experiment #",
+                   oID = "Effect #",
+                   internalID = "Internal replication #",
+                   
+                   testReported = "Was a statistical test reported in the original paper?.x",
+                   
+                   origDirection = "Expected difference based on the original paper?",
+                   repDirection = "Observed difference in replication?",
+                   
+                   origN = "Original sample size",
+                   repN = "Replication sample size",
+                   
+                   # point estimates that were sometimes available even when 
+                   #  couldn't calculate effect sizes
+                   origRawDiff = "Original point difference (for representative data)",
+                   repRawDiff = "Replication raw difference (if original reported representative data)",
+                   
+                   # main effect sizes for us, but not yet on same scale
+                   origES = "Original effect size",
+                   origESLo = "Original lower CI",
+                   origESHi = "Original upper CI",
+                   origdf1 = "Original df1",
+                   origdf2 = "Original df2",
+                   origPval = "Original p value",
+                   
+                   repES = "Replication effect size",
+                   repESLo = "Replication lower CI",
+                   repESHi = "Replication upper CI",
+                   repdf1 = "Replication df1",
+                   repdf2 = "Replication df2",
+                   repPval = "Replication p value",
+                   
+                   EStype = "Effect size type",
+                   
+                   # raw moderators
+                   expType = "Type of experiment",
+                   # has strings that can be used to determine type of lab:
+                   labsContracted = "Lab(s) contracted for the experiment",
+                   materialsRequested = "Key materials asked to be shared",
+                   responseQuality = "Quality of response from original authors",
+                   # when this is NA, no mods were needed:
+                   changesNeededProse = "If modifications were needed for experiment to proceed, what were they?" )
 
 # save intermediate dataset for easy debugging
 write_interm(d2, "intermediate_dataset_step1.csv")
@@ -184,7 +189,7 @@ table(d2$origSignif, d2$origDirection)
 # @IMPORTANT: note that response quality coding exists even if no materials were requested
 table( is.na(d2$materialsRequested), d2$responseQuality )  
 d2 = recode_checkboxes(.d = d2,
-                         var = "materialsRequested")
+                       var = "materialsRequested")
 d2 = d2 %>% rename( "reqAntibodies"  = "Antibodies",
                     "reqCells" = "Cells",
                     "reqPlasmids" = "Plasmids" )
@@ -209,11 +214,20 @@ d2$peoID = paste( "p", d2$pID, "e", d2$eID, "o", d2$oID, sep = "")
 d2 = d2 %>% group_by(peoID) %>%
   mutate(nInternal = n())
 
+# ID for paper-exp combos
+# used for making the experiment-level data
+d2$peID = paste( "p", d2$pID, "e", d2$eID, sep = "" )
 
 # look at the analysis variables
 # easy trick to find analysis variables: their names don't have spaces
 ( analysisVars = names(d2)[ !whichStrings("[.]", names(d2)) ] )
-analysisVars = analysisVars[ !analysisVars %in% c("Notes")]
+analysisVars = analysisVars[ !analysisVars %in% c("Notes, Organisms")]
+
+# @@maybe move this?
+# moderators
+modVars = c("responseQuality", "expType", "labsContracted", "changesNeededProse", 
+         "repSignif", "origSignif", "reqAntibodies", "reqCells", "Organisms", 
+         "reqPlasmids", "labType", "expAnimal")
 
 CreateTableOne( dat = d2 %>% select(analysisVars) %>%
                   select( -c("changesNeededProse", stringsWith("ID", names(d2) ) ) ) )
@@ -230,9 +244,6 @@ write_interm(d2, "intermediate_dataset_step2.csv")
 d2 = read_interm("intermediate_dataset_step2.csv")
 
 ##### Sanity checks on effect types #####
-
-# bm
-
 
 t = d2 %>% group_by(EStype, Statistical.test.applied.to.original.data) %>%
   summarise(n())
@@ -267,14 +278,14 @@ write.csv(t, "rows_with_correlations.csv")
 # these make sense
 SMDtypes = c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta")
 t = d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
-        select(EStype, 
-               pID,
-               eID, 
-               oID,
-               Statistical.test.applied.to.original.data,
-               What.statistical.test.was.reported.,
-               Original.test.statistic.type,
-               origES)
+  select(EStype, 
+         pID,
+         eID, 
+         oID,
+         Statistical.test.applied.to.original.data,
+         What.statistical.test.was.reported.,
+         Original.test.statistic.type,
+         origES)
 View2(t)
 # original statistical test (note: @a lot of NAs here)
 t %>% group_by(Statistical.test.applied.to.original.data) %>%
@@ -282,13 +293,13 @@ t %>% group_by(Statistical.test.applied.to.original.data) %>%
 
 # HRs
 t = d2 %>% filter( !is.na(EStype) & EStype %in% "Hazard ratio" ) %>%
-        select(pID,
-               eID, 
-               oID,
-               Statistical.test.applied.to.original.data,
-               What.statistical.test.was.reported.,
-               Original.test.statistic.type,
-               origES)
+  select(pID,
+         eID, 
+         oID,
+         Statistical.test.applied.to.original.data,
+         What.statistical.test.was.reported.,
+         Original.test.statistic.type,
+         origES)
 # @paper 44: they fit a Cox regression but reported a t-test, but we have a HR?
 # Tim confirmed this was a mistake on the original authors' part
 # original statistical test (note: @a lot of NAs here)
@@ -361,7 +372,7 @@ for (i in toConvert) {
   # this will be the same for each i, so just do it once
   if (i == toConvert[1]) d2$ES2type = temp$ES2type
 }
-  
+
 # sanity checks
 data.frame( d2 %>% group_by(EStype, ES2type) %>%
               summarise( meanNA(origES), 
@@ -382,7 +393,7 @@ d2$repSE2 = ( d2$repESHi2 - d2$repESLo2 ) / ( 2 * qnorm(.975) )
 d2$origVar2 = d2$origSE2^2
 d2$repVar2 = d2$repSE2^2
 
-  
+
 ##### ES3: SMDs where possible; otherwise NA #####
 
 # do me later
@@ -440,29 +451,33 @@ expect_equal( nrow(temp), nrow(d2) )
 #   mutate( FE = mean(repES2) )
 
 ##### Sanity checks #####
-# manually reproduce for ones with 1 replication
-id = t$peoID[t$n == 1]
-# FE estimate should just be the single estimate
-expect_equal(temp$FE[d2$peoID %in% id], d2$repES2[d2$peoID %in% id])
-expect_equal(temp$FEvar[d2$peoID %in% id], d2$repVar2[d2$peoID %in% id])
 
-# check one with 2 internal replications
-id = t$peoID[t$n == 2][1]
-# point estimate
-expect_equal( unique(temp$FE[d2$peoID %in% id]),
-              as.numeric( rma.uni( yi = d2$repES2[d2$peoID == id],
-                                   vi = d2$repVar2[d2$peoID == id],
-                                   method = "FE")$b ) )
-# variance
-expect_equal( unique(temp$FEvar[d2$peoID %in% id]),
-              as.numeric( rma.uni( yi = d2$repES2[d2$peoID == id],
-                                   vi = d2$repVar2[d2$peoID == id],
-                                   method = "FE")$se^2 ) )
+if ( run.sanity == TRUE ) {
+  # manually reproduce for ones with 1 replication
+  id = t$peoID[t$n == 1]
+  # FE estimate should just be the single estimate
+  expect_equal(temp$FE[d2$peoID %in% id], d2$repES2[d2$peoID %in% id])
+  expect_equal(temp$FEvar[d2$peoID %in% id], d2$repVar2[d2$peoID %in% id])
+  
+  # check one with 2 internal replications
+  id = t$peoID[t$n == 2][1]
+  # point estimate
+  expect_equal( unique(temp$FE[d2$peoID %in% id]),
+                as.numeric( rma.uni( yi = d2$repES2[d2$peoID == id],
+                                     vi = d2$repVar2[d2$peoID == id],
+                                     method = "FE")$b ) )
+  # variance
+  expect_equal( unique(temp$FEvar[d2$peoID %in% id]),
+                as.numeric( rma.uni( yi = d2$repES2[d2$peoID == id],
+                                     vi = d2$repVar2[d2$peoID == id],
+                                     method = "FE")$se^2 ) )
+  
+  # check that FE estimate is always equal to replication estimate
+  #  when nInternal = 1, and otherwise is not
+  temp$agrees = abs(temp$FE - temp$repES2) < 0.001
+  table(temp$agrees, temp$nInternal, useNA = "ifany")
+}
 
-# check that FE estimate is always equal to replication estimate
-#  when nInternal = 1, and otherwise is not
-temp$agrees = abs(temp$FE - temp$repES2) < 0.001
-table(temp$agrees, temp$nInternal, useNA = "ifany")
 
 
 ###### Overwrite the d2 variables with pooled ones #####
@@ -474,4 +489,106 @@ d2$repSE2 = sqrt(temp$FEvar)
 d3 = d2[ !duplicated(d2$peoID), ]
 
 write_interm(d3, "intermediate_dataset_step4.csv")
+
+
+################################ 5. POOL WITHIN EXPERIMENTS (FOR EXPERIMENT-LEVEL DATASET) ################################ 
+
+# are moderators constant within peID?
+nUniques = d3 %>%
+  group_by(peID) %>%
+  summarise( across(.cols = modVars,
+                    .fns = uni ) ) %>%
+  select(-peID)
+
+any(nUniques  > 1)
+
+table(nUniques)
+
+#@@ **ask Tim: moderators aren't unique within experiments
+# so how will we do those analyses?
+table( unlist(as.data.frame(nUniques) ) )
+
+
+
+# number of replications per experiment
+# used below in sanity checks
+t = d3 %>%
+  filter(!is.na(repES2) & !is.na(origES2)) %>%
+  group_by(peID) %>%
+  summarise(n = n())
+table(t$n)
+# @@max 12 outcomes; sanity-check with Tim
+
+##### Pool outcomes via RE meta-analysis #####
+# note that this is RE meta-analysis rather than FE as for the internal replications
+# kept separate from d2 for now to facilitate sanity checks
+# temp has same dimensions as d2
+temp = d3 %>%
+  filter(!is.na(repES2) & !is.na(origES2)) %>%
+  group_by(peID) %>%
+  mutate( robu2(yi = repES2, vi = repVar2) )
+
+
+##### Sanity checks #####
+
+if ( run.sanity == TRUE ) {
+  # manually reproduce the first one
+  temp$peID[1]
+  
+  mod = robu( repES2 ~ 1,
+              var.eff.size = repVar2,
+              data = d3 %>% filter( peID == temp$peID[1]),
+              studynum = 1:nrow(d3 %>% filter( peID == temp$peID[1])),
+              small = TRUE )
+  
+  expect_equal( as.numeric(mod$b.r), unique( temp$est[ temp$peID == temp$peID[1]] ) )
+  expect_equal( as.numeric(mod$reg_table$SE^2), unique( temp$var[ temp$peID == temp$peID[1]] ) )        
+}            
+
+
+###### Overwrite the d2 variables with pooled ones #####
+
+# experiment-level version of d3
+d3e = d3
+
+d3e$repES2 = temp$est
+d3e$repVar2 = temp$var
+d3e$repSE2 = sqrt(temp$FEvar)
+
+# keep only 1 row per outcome (collapse over internal replications)
+d3e = d3e[ !duplicated(d2$peID), ]
+
+# @@ any other vars that change with pe need to be dealt with here, 
+#  such as replication p-value, etc.
+# BEWARE: variables like this are currently the FIRST value within that peID, 
+#  not the ones from pooling
+
+
+
+################################ 6. SAVE ANALYSIS DATASETS ################################ 
+
+# key variables for analysis:
+#  - ES2 variables: converted to a scale that can be meta-analyzed, but not necessarily SMD
+# repPval = "Replication p value",
+# 
+# EStype = "Effect size type",
+# 
+# # raw moderators
+# expType = "Type of experiment",
+# # has strings that can be used to determine type of lab:
+# labsContracted = "Lab(s) contracted for the experiment",
+# materialsRequested = "Key materials asked to be shared",
+# responseQuality
+
+
+
+# first level of granularity: outcome-level
+setwd(prepped.data.dir)
+fwrite(d3, "prepped_outcome_level_data.csv")
+
+# second level of granularity: experiment-level
+# @@not done yet
+
+
+
 
