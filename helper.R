@@ -217,20 +217,20 @@ logOR_to_SMD = function(logOR,
 }
 
 
-# sanity check
-logOR = c(log(1.03), log(.75), NA)
-lo = c(log(.8), NA, NA)
-hi = c(NA, log(.9), NA)
-res = logOR_to_SMD( logOR, lo, hi )
-
-expect_equal( res$SMD[1], sqrt(3)/pi * res$logOR[1] )
-expect_equal( res$loSMD[1], sqrt(3)/pi * res$lo[1] )
-
-# instead of what the fn is doing (i.e., convert CI limit itself), try getting var of
-#  OR first from its CI limit
-varLogOR = ( ( res$logOR[1] - res$lo[1] ) / qnorm(.975) )^2
-expect_equal( res$varSMD[1], sqrt(3)/pi * varLogOR )
-# @ WHY SO DIFFERENT?
+# # sanity check
+# logOR = c(log(1.03), log(.75), NA)
+# lo = c(log(.8), NA, NA)
+# hi = c(NA, log(.9), NA)
+# res = logOR_to_SMD( logOR, lo, hi )
+# 
+# expect_equal( res$SMD[1], sqrt(3)/pi * res$logOR[1] )
+# expect_equal( res$loSMD[1], sqrt(3)/pi * res$lo[1] )
+# 
+# # instead of what the fn is doing (i.e., convert CI limit itself), try getting var of
+# #  OR first from its CI limit
+# varLogOR = ( ( res$logOR[1] - res$lo[1] ) / qnorm(.975) )^2
+# expect_equal( res$varSMD[1], sqrt(3)/pi * varLogOR )
+# # @ WHY SO DIFFERENT?
 
 
 
@@ -273,6 +273,21 @@ est = 1.05
 ci.lim = 1.15
 df = 10
 
+
+# x2 should be 0/1
+cohen_d = function( x2, y ) {
+  n0 = length(x2[x2==0])
+  n1 = length(x2[x2==1])
+  m0 = mean( y[x2==0] )
+  m1 = mean( y[x2==1] )
+  sd0 = sd( y[x2==0] )
+  sd1 = sd( y[x2==1] )
+  num = (n0 - 1) * sd0^2 + (n1 - 1) * sd1^2
+  denom = n0 + n1 - 2
+  sig.pool = sqrt( num / denom )
+  d = (m1 - m0) / sig.pool
+  return(d)
+}
 
 
 

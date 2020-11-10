@@ -233,6 +233,10 @@ d2 = read_interm("intermediate_dataset_step2.csv")
 
 # bm
 
+
+t = d2 %>% group_by(EStype, Statistical.test.applied.to.original.data) %>%
+  summarise(n())
+
 # @IMPORTANT: these are not necessarily Pearson's r! 
 #  some are Wilcoxon, so aren't comparable
 # for the Pearson's r ones, find out if exposure was binary
@@ -242,6 +246,7 @@ t = d2 %>% filter( !is.na(EStype) & EStype == "r" ) %>%
          eID, 
          oID,
          Statistical.test.applied.to.original.data,
+         Original.test.statistic.value,
          What.statistical.test.was.reported.,
          Original.test.statistic.type,
          origES) 
@@ -296,6 +301,11 @@ t %>% group_by(Statistical.test.applied.to.original.data) %>%
 # Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
 
 table(d2$EStype)
+
+# @for Tim: ones for which we want means and SDs
+temp = c("between-subjects ANOVA", "Kruskal-Wallis rank sum test", "Wilcoxon signed-rank test", "Spearman's rank correlation")
+d2$peoID[ ( d2$EStype %in% c("Cliff's delta", "Cohen's w" ) | d2$Statistical.test.applied.to.original.data %in% temp ) ]
+
 
 # how many can be converted to Cohen's d type SMD? (of the completed pairs only)
 canConvert = c("Cohen's d", "Glass' delta", "Hazard ratio", "r")
