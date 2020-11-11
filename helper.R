@@ -4,7 +4,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-# x is row of dataframe
+# calculates pairwise metrics for one row of data (whether at outcome- or experiment-level)
 analyze_one_row = function(origES2,
                            origVar2, 
                            repES2,
@@ -56,23 +56,23 @@ analyze_one_row = function(origES2,
   # only use truly comparable SMDs for this
   if ( !is.na(ES2type) & ES2type %in% c("Cohen's d", "Glass' delta") ){
     #if ( ES2type %in% c("Cohen's d", "Glass' delta") ) {
-      Porig.sens = p_orig( yio = origES2,
-                           vio = origVar2,
-                           yr = repES2,
-                           vyr = repVar2,
-                           t2 = sqrt(.13) )
-      
-      # prediction interval
-      # as in Replicate::pred_int, but adding in t2 here:
-      yio = origES2
-      vio = origVar2
-      yir = repES2
-      vir = repVar2
-      pooled.SE = sqrt(vio + vir + .13)
-      PILo.sens = yio - qnorm(1 - .05/2) * pooled.SE
-      PIHi.sens = yio + qnorm(1 - .05/2) * pooled.SE
-      PIinside.sens = (yir > PILo.sens) & (yir < PIHi.sens)
-      
+    Porig.sens = p_orig( yio = origES2,
+                         vio = origVar2,
+                         yr = repES2,
+                         vyr = repVar2,
+                         t2 = sqrt(.13) )
+    
+    # prediction interval
+    # as in Replicate::pred_int, but adding in t2 here:
+    yio = origES2
+    vio = origVar2
+    yir = repES2
+    vir = repVar2
+    pooled.SE = sqrt(vio + vir + .13)
+    PILo.sens = yio - qnorm(1 - .05/2) * pooled.SE
+    PIHi.sens = yio + qnorm(1 - .05/2) * pooled.SE
+    PIinside.sens = (yir > PILo.sens) & (yir < PIHi.sens)
+    
     #}
   } else {
     Porig.sens = PILo.sens = PIHi.sens = PIinside.sens = NA
@@ -165,6 +165,129 @@ analyze_one_row = function(origES2,
 #                 x$repVar2,
 #                 x$ES2type)
 
+
+# analyze a subset or a moderator
+# n.tests: for Bonferroni
+analyze_moderators = function( .dat,
+                               yi.name,  # a pairwise metrics
+                               vi.name,  # variances of pairwise metrics (use a single NA if doesn't have one)
+                               
+                               analysis.label,
+                               mod.names,
+                               mod.continuous = FALSE,
+                               #ql,  # log scale
+                               #take.exp,
+                               #boot.reps = 2000,
+                               n.tests=1,
+                               digits = 2
+) {
+  
+  # maybe use MRM metrics???
+  
+  ##### test only
+  analysis.name = "FE"
+  .dat = dat
+  yi.name = "pw.FEest"
+  vi.name = "pw.FEvar"
+  #vi = rep(1, nrow(dat))  # variances of pairwise metrics (use 1 for all if no variances)
+  analysis.label = "Porig",
+  mod.names = c("responseQuality",
+                "expType",
+                "reqAntibodies",
+                "reqCells",
+                "reqPlasmids",
+                "labType",
+                "expAnimal")
+  # mod.continuous = FALSE,
+  
+  n.tests=length(moderators)
+  digits = 2
+  ##### end test
+  
+  
+  .dat$Yi = .dat[[yi.name]]
+  .dat$Vi = .dat[[vi.name]]
+  
+  # complete cases to avoid "t(x) %*% w : non-conformable arguments" in clubSandwich
+  .dat = .dat[ , c("pID", "eID", "Yi", "Vi", mod.names ) ]
+  .dat = .dat[ complete.cases(.dat), ]
+  
+  formString = paste( "Yi ~ ", paste( mod.names, collapse= " + ") )
+  
+  library(clubSandwich)
+  
+  
+  ##### Set Up Working Correlation Matrix #####
+  if ( !is.na(vi.name) ) {
+    # from Pustejovsky code "Analyze Tanner-Smith & Lipsey 2015 data.R"
+    # CHE: multilevel random effects model with constant sampling correlation working
+    # constant sampling correlation working model
+    V_mat <- impute_covariance_matrix(vi = .dat$Vi,
+                                      cluster = .dat$pID,  #@@ may need to change this?
+                                      r = 0.6)
+  }
+  
+  
+  if ( is.na(vi.name) ) {
+    # no variances, so just set to 1s
+    V_mat <- impute_covariance_matrix(vi = rep(1,  nrow(.dat) ),
+                                      cluster = .dat$pID,  #@@ may need to change this?
+                                      r = 0.6)
+  }
+  
+  
+  ##### Fit Random-Effects Model #####
+  # fit random effects working model in metafor
+  # three-level model: https://stats.stackexchange.com/questions/116659/mixed-effects-meta-regression-with-nested-random-effects-in-metafor-vs-mixed-mod
+  # @@the random structure will be only two-level when doing exp-level 
+  model <- rma.mv( eval( parse(text=formString) ),
+                   V = V_mat,
+                   random = ~ 1 | pID / eID,
+                   data = .dat,
+                   sparse = TRUE)
+  
+  # above reports model-based (not robust) standard errors
+  
+  # RVE standard errors
+  res <- conf_int(model, vcov = "CR2")
+  
+  # @@decide on t vs. z (keep consistent with conf_int above)
+  #pvals = 2 * pt( abs(res$beta) / res$SE, df = res$df, lower.tail = FALSE )
+  pvals = 2 * pnorm( abs(res$beta) / res$SE, lower.tail = FALSE )
+  
+  # compare to model-based p-values
+  #cbind(pvals, model$pval)
+  
+  ##### Put Results in Dataframe #####
+  est.string = paste( round( res$beta, digits ),
+                      format_CI( res$CI_L, 
+                                 res$CI_U,
+                                 digits),
+                      sep = " " )
+  
+  tau.string = round( sqrt(model$tau2), digits)
+  
+  
+  new.row = data.frame( Analysis = analysis.name,
+                        Coefficient = row.names(res),
+                        n = nrow(.dat),  # complete-cases
+                        Est = est.string,
+                        Pval = format_stat(pvals, cutoffs = c(.1, .0001) ),
+                        Pval.Bonf = format_stat( pmin(pvals*n.tests, 1) ),
+                        Tau = tau.string )
+  
+  
+  
+  # this should be a global variable
+  if ( !exists("resE") ){
+    modTable <<- new.row
+  } else {
+    library(plyr)
+    modTable <<- rbind.fill(modTable, new.row)
+    detach("package:plyr", unload=TRUE)
+  }
+} 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                   DATA-PREP HELPER                                #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -227,7 +350,7 @@ convert_to_ES3 = function(x,
   # convert log-HRs
   ind = !is.na(.EStype) & .EStype == "Log hazard ratio"
   x2[ind] = 
-  type[ind] = "Log hazard ratio"
+    type[ind] = "Log hazard ratio"
   
   # @ASSUMES R IS PEARSON CORRELATION; NEED TO CHECK IF TRUE:
   ind = !is.na(.EStype) & .EStype == "r" 
@@ -274,13 +397,13 @@ logHR_to_logOR = function(logHR,
                   lo,
                   hi,
                   rareY)
-
+  
   
   ##### Rare Outcome #####
   # if outcome is rare, no transformation needed
   d[ eqNA(d$rareY == TRUE), c("logOR", "loLogOR", "hiLogOR") ] = d[ eqNA(d$rareY == TRUE), c("logHR", "lo", "hi") ]
   
-
+  
   ##### Common Outcome #####
   # if outcome is common, use TVW's two transformations
   # logHR ->(Biometrics Thm2 conversion) logOR ->(sqrt conversion) logRR
@@ -289,7 +412,7 @@ logHR_to_logOR = function(logHR,
     logRR = rep(NA, length(logHR))
     
     logRR[ !is.na(logHR) ] = log( ( 1 - 0.5^sqrt( exp(logHR[ !is.na(logHR) ]) ) ) / ( 1 - 0.5^sqrt( 1 / exp(logHR[ !is.na(logHR) ]) ) ) )
-
+    
     return(logRR)
   } )
   #logHR_to_logRR_common( c(log(1.4), log(.745), NA) )
@@ -305,7 +428,7 @@ logHR_to_logOR = function(logHR,
     return(logOR)
   } )
   #logRR_to_logOR_common( c(log(1.4), log(.745), NA) )
-
+  
   
   # first convert logHR -> logRR via 
   #  TVW's Biometrics conversion (Thm 2)
@@ -352,14 +475,14 @@ logHR_to_logOR = function(logHR,
 
 # Hasselblad & Hedges conversion that we think only works for common outcomes
 logOR_to_SMD = function(logOR,
-                          lo = NA,
-                          hi = NA){
- 
+                        lo = NA,
+                        hi = NA){
+  
   d = data.frame( logOR,
                   lo,
                   hi)
-
-
+  
+  
   # purpose of the internal fn here is to handle NAs in the above dataframe
   .logOR_to_SMD = Vectorize( function(logOR){
     
@@ -370,18 +493,18 @@ logOR_to_SMD = function(logOR,
     return(SMD)
   } )
   #logHR_to_logRR_common( c(log(1.4), log(.745), NA) )
-
+  
   
   d[ c("SMD", "loSMD", "hiSMD") ] = .logOR_to_SMD( d[ c("logOR", "lo", "hi") ] )
   
- 
+  
   ##### Get Variance from CI #####
   # use either lower or upper limit, depending on what's available
   d$lim = d$loSMD
   d$lim[ is.na(d$loSMD) ] = d$hiSMD[ is.na(d$loSMD) ]
   
   d$varSMD[ !is.na(d$lim) ] = ci_to_var( est = d$SMD[ !is.na(d$lim) ],
-                                           ci.lim = d$lim[ !is.na(d$lim) ] )
+                                         ci.lim = d$lim[ !is.na(d$lim) ] )
   
   return(d)
 }
@@ -516,7 +639,7 @@ whichStrings = function(pattern, x){
 #  or description
 searchBook = function(pattern){
   rows = whichStrings( tolower(pattern), tolower(cd$`Current variable name`) ) |
-                   whichStrings( tolower(pattern), tolower(cd$`Description of variable`) )
+    whichStrings( tolower(pattern), tolower(cd$`Description of variable`) )
   View(cd[ rows, ])
 }
 #searchBook("p value")
@@ -616,10 +739,10 @@ update_result_csv = function( name,
   # also write to Overleaf
   if (exists("overleaf.dir")){
     setwd(overleaf.dir)
-  write.csv( .res, 
-             "stats_for_paper.csv",
-             row.names = FALSE,
-             quote = FALSE )
+    write.csv( .res, 
+               "stats_for_paper.csv",
+               row.names = FALSE,
+               quote = FALSE )
   }
   
   if ( print == TRUE ) {

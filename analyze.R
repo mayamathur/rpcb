@@ -79,11 +79,13 @@ table(dat$origDirection, dat$repDirection, useNA = "ifany")
 mean( dat$repDirection == "Positive" )
 sum( dat$repDirection == "Positive" )
 
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #              MAIN PAIRWISE METRICS (COMPLETED QUANT PAIRS)                        #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-################################ TO CALCULATE FOR EACH PAIR ################################ 
+################################ CALCULATE PAIRWISE METRICS ################################ 
 
 # Primary: Prediction interval and whether replication falls inside it (assuming t2=0)
 # Make forest plot of these, including Porig on the side
@@ -130,6 +132,37 @@ takeMean = c("pw.PIRepInside",
 #                   .fns = mean) ) 
 
 colMeans( dat %>% select(takeMean), na.rm = TRUE )
+
+
+################################ META-REGRESSION ################################ 
+
+# only experiment-level 
+
+# We will report the above metrics for each pair. Additionally, to summarize the above three metrics across pairs while accounting for their possible non-independence, we will robustly meta-regress each metric in a manner that accounts for clustering within original studies (Hedges et al., 2010). This model provides asymptotically correct inference even when the clustering structure is misspecified, which is important here because of the difficulty of precisely specifying the complex nature of clustering. This will yield average values of Porig, the difference, and the fixed-effects pooled estimate across all pairs. 
+
+# Moderators:
+# Animal vs. non-animal
+# Type of replication lab (contract research organization [CRO] vs. academic core lab)
+# What was requested from original authors and the response? (scored subjectively; Likert scale)
+# Was a post hoc modification to protocol needed to complete the experiment? (col W in experiment level)
+# N of original
+# ES of original
+
+
+# table(d$`Original test statistic type`)
+
+# bm
+
+# metrics that have variances:
+# "pw.ratio", - @@need to calculate its variance in analyze_one_row
+#  "pw.FEest"
+
+# metrics that don't have variances:
+c("pw.PIRepInside",
+  "pw.PIRepInside.sens",
+  "pw.Porig",
+  "pw.PorigSens",
+  "pw.PsigAgree1")
 
 
 ################################ SUMMARIES AFTER THE ABOVE ################################ 
@@ -322,22 +355,6 @@ p = ggplot() +
   
   
   
-  
-  
-  
-#   +
-#   
-#   # prettify
-#   theme_bw() +
-#   theme( panel.grid.major=element_blank(),
-#          panel.grid.minor=element_blank() )
-# 
-# 
-# # scale_x_continuous(expand=c(0,0), limits=c(0, .625)) +
-# # scale_y_discrete(expand=c(0.2,0))
-# 
-# p
-
 
 
 # # 15 x 9 works well
@@ -360,26 +377,7 @@ p = ggplot() +
 # Primary: Percentage of replication estimates >0 (but will be an overestimate due to overdispersion)
 # @replace with calibrated version?
 
-# FIGURE: Density plot of calibrated estimates (outcome level) for group of replications and group of originals, overlaid
-
-
-
-################################ META-REGRESSION ################################ 
-
-# We will report the above metrics for each pair. Additionally, to summarize the above three metrics across pairs while accounting for their possible non-independence, we will robustly meta-regressed each metric in a manner that accounts for clustering within original studies (Hedges et al., 2010). This model provides asymptotically correct inference even when the clustering structure is misspecified, which is important here because of the difficulty of precisely specifying the complex nature of clustering. This will yield average values of Porig, the difference, and the fixed-effects pooled estimate across all pairs. 
-
-# Moderators:
-# Animal vs. non-animal
-# Type of replication lab (contract research organization [CRO] vs. academic core lab)
-# What was requested from original authors and the response? (scored subjectively; Likert scale)
-# Was a post hoc modification to protocol needed to complete the experiment? (col W in experiment level)
-# N of original
-# ES of original
-
-
-# table(d$`Original test statistic type`)
-
-
+# FIGURE: Density plot of calibrated estimates (outcome level) for group of replications and group of originals, overlaid, and facetted by EStype
 
 
 
