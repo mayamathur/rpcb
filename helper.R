@@ -133,6 +133,10 @@ analyze_one_row = function(origES2,
                    vi = c(origVar2, repVar2),
                    method = "FE")
   
+  # use delta method to approximate variance of ratio
+  library(msm)
+  pw.ratioVar = deltamethod( ~ x1/x2,
+               mean = c( origES2, repES2 ), cov = diag( c(origVar2, repVar2) ) )
   
   #return as dataframe for mutate joys
   # "pw" prefix for "pairwise" metrics
@@ -148,6 +152,7 @@ analyze_one_row = function(origES2,
                       pw.PorigSens = Porig.sens,
                       
                       pw.ratio = origES2 / repES2,
+                      pw.ratioVar = pw.ratioVar,
                       
                       pw.PsigAgree1 = PsigAgree1,
                       
