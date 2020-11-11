@@ -151,18 +151,53 @@ colMeans( dat %>% select(takeMean), na.rm = TRUE )
 
 # table(d$`Original test statistic type`)
 
-# bm
+# moderator correlation matrix as in AWR
+mod.names = c("responseQuality",
+              "expType",
+              "reqAntibodies",
+              "reqCells",
+              "reqPlasmids",
+              "labType",
+              "expAnimal")
 
-# metrics that have variances:
-# "pw.ratio", - @@need to calculate its variance in analyze_one_row
-#  "pw.FEest"
+##### analyze pairwise metrics that do have variances
+outcomesWithVar = c( "pw.ratio", 
+                     "pw.FEest")
 
-# metrics that don't have variances:
-c("pw.PIRepInside",
-  "pw.PIRepInside.sens",
-  "pw.Porig",
-  "pw.PorigSens",
-  "pw.PsigAgree1")
+#bm
+
+
+
+##### analyze pairwise metrics that don't have variances
+outcomesWithoutVar = c("pw.PIRepInside",
+                       "pw.PIRepInside.sens",
+                       "pw.Porig",
+                       "pw.PorigSens",
+                       "pw.PsigAgree1")
+
+if ( exists("modTable") ) rm(modTable)
+
+for ( i in outcomesWithoutVar ) {
+  analyze_moderators(  .dat = dat,
+                       yi.name = i,
+                       vi.name = NA,
+                       
+                       # cut out the "pw." part of outcome name
+                       analysis.label = strsplit(i, "[.]")[[1]][2],
+                       
+                       mod.names = c("responseQuality",
+                                     "reqAntibodies",
+                                     "reqCells",
+                                     "reqPlasmids",
+                                     "labType",
+                                     "expAnimal"),
+                       
+                       n.tests = length(mod.names),
+                       digits = 2 )
+}
+
+
+modTable
 
 
 ################################ SUMMARIES AFTER THE ABOVE ################################ 
@@ -224,7 +259,7 @@ p = ggplot() +
              scales = "free",
              space = "free"
              #space = "free_y"
-             ) +
+  ) +
   
   # null
   geom_vline(xintercept = 0,
@@ -310,17 +345,17 @@ p = ggplot() +
             size=3.1,
             vjust=-2,
             fontface="bold") 
-  
 
 
-  # bm
-  # Porig panel
-  p + geom_rect(data=dp,
-            aes(xmin=stringPanel2Start,  # hard-coded location
-                xmax=stringPanel2End,
-                ymin=-Inf,
-                ymax=Inf),
-            fill="grey") +
+
+# bm
+# Porig panel
+p + geom_rect(data=dp,
+              aes(xmin=stringPanel2Start,  # hard-coded location
+                  xmax=stringPanel2End,
+                  ymin=-Inf,
+                  ymax=Inf),
+              fill="grey") +
   
   geom_text(data=dp,
             aes(label = round( pw.Porig, digits ),
@@ -334,7 +369,7 @@ p = ggplot() +
                 y=plotID,
                 #label = TeX("$P_{orig}$")
                 label="Porig"
-                ),
+            ),
             #label = "asdfd",
             #label = TeX("$P_{orig}$"),
             #label = expression(paste("DOC (mg ", L^-1,")")),
@@ -342,19 +377,19 @@ p = ggplot() +
             size=3.1,
             vjust=-2,
             fontface="bold") + 
-    
-    # basic prettifying
-    theme_bw() +
-    theme( panel.grid.major=element_blank(),
-           panel.grid.minor=element_blank() ) +
-    
-    xlab("Point estimate") +
-    ylab("Paper, experiment, and outcome")
-    
-    
   
+  # basic prettifying
+  theme_bw() +
+  theme( panel.grid.major=element_blank(),
+         panel.grid.minor=element_blank() ) +
   
-  
+  xlab("Point estimate") +
+  ylab("Paper, experiment, and outcome")
+
+
+
+
+
 
 
 # # 15 x 9 works well

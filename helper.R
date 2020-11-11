@@ -170,43 +170,45 @@ analyze_one_row = function(origES2,
 # n.tests: for Bonferroni
 analyze_moderators = function( .dat,
                                yi.name,  # a pairwise metrics
-                               vi.name,  # variances of pairwise metrics (use a single NA if doesn't have one)
+                               vi.name = NA,  # variances of pairwise metrics (use a single NA if doesn't have one)
                                
                                analysis.label,
                                mod.names,
-                               mod.continuous = FALSE,
-                               #ql,  # log scale
-                               #take.exp,
-                               #boot.reps = 2000,
+
                                n.tests=1,
                                digits = 2
 ) {
   
-  # maybe use MRM metrics???
+  # @@maybe use MRM metrics???
   
-  ##### test only
-  analysis.name = "FE"
-  .dat = dat
-  yi.name = "pw.FEest"
-  vi.name = "pw.FEvar"
-  #vi = rep(1, nrow(dat))  # variances of pairwise metrics (use 1 for all if no variances)
-  analysis.label = "Porig",
-  mod.names = c("responseQuality",
-                "expType",
-                "reqAntibodies",
-                "reqCells",
-                "reqPlasmids",
-                "labType",
-                "expAnimal")
-  # mod.continuous = FALSE,
-  
-  n.tests=length(moderators)
-  digits = 2
-  ##### end test
-  
+  # ##### test only
+  # analysis.label = "FE"
+  # yi.name = "pw.FEest"
+  # vi.name = "pw.FEvar"
+  # 
+  # analysis.label = "Porig"
+  # yi.name = "pw.Porig"
+  # vi.name = NA
+  # 
+  # .dat = dat
+  # 
+  # mod.names = c("responseQuality",
+  #               "reqAntibodies",
+  #               "reqCells",
+  #               "reqPlasmids",
+  #               "labType",
+  #               "expAnimal")
+  # # mod.continuous = FALSE,
+  # 
+  # n.tests=length(moderators)
+  # digits = 2
+  # ##### end test
+
   
   .dat$Yi = .dat[[yi.name]]
-  .dat$Vi = .dat[[vi.name]]
+  
+  if ( !is.na(vi.name) ) .dat$Vi = .dat[[vi.name]]
+  if ( is.na(vi.name) ) .dat$Vi = 1
   
   # complete cases to avoid "t(x) %*% w : non-conformable arguments" in clubSandwich
   .dat = .dat[ , c("pID", "eID", "Yi", "Vi", mod.names ) ]
@@ -214,49 +216,61 @@ analyze_moderators = function( .dat,
   
   formString = paste( "Yi ~ ", paste( mod.names, collapse= " + ") )
   
+  # use club sandwich estimators throughout instead of plain sandwich
+  #  to handle few clusters and/or wrong working model
   library(clubSandwich)
   
   
-  ##### Set Up Working Correlation Matrix #####
   if ( !is.na(vi.name) ) {
+    ##### Set Up Working Correlation Matrix #####
     # from Pustejovsky code "Analyze Tanner-Smith & Lipsey 2015 data.R"
     # CHE: multilevel random effects model with constant sampling correlation working
     # constant sampling correlation working model
-    V_mat <- impute_covariance_matrix(vi = .dat$Vi,
-                                      cluster = .dat$pID,  #@@ may need to change this?
-                                      r = 0.6)
+    V_mat = impute_covariance_matrix(vi = .dat$Vi,
+                                     cluster = .dat$pID,  #@@ may need to change this?
+                                     r = 0.6)
+    
+    ##### Fit Random-Effects Model #####
+    # fit random effects working model in metafor
+    # three-level model: https://stats.stackexchange.com/questions/116659/mixed-effects-meta-regression-with-nested-random-effects-in-metafor-vs-mixed-mod
+    # @@the random structure will be only two-level when doing exp-level 
+    model = rma.mv( eval( parse(text=formString) ),
+                    V = V_mat,
+                    #V = Vi,  # if Vi = 1 throughout, makes it similar to lmer
+                    random = ~ 1 | pID / eID,
+                    data = .dat,
+                    sparse = TRUE)
+    
+    # RVE standard errors
+    res = conf_int(model, vcov = "CR2")
+    
+    t2 = sqrt(model$tau2)
+    
+    # compare to model-based p-values
+    #cbind(pvals, model$pval)
   }
-  
   
   if ( is.na(vi.name) ) {
-    # no variances, so just set to 1s
-    V_mat <- impute_covariance_matrix(vi = rep(1,  nrow(.dat) ),
-                                      cluster = .dat$pID,  #@@ may need to change this?
-                                      r = 0.6)
+    # above reports model-based (not robust) standard errors
+    
+    # sanity check: compare to lmer
+    #   model-based should match exactly IF variances all equal
+    library(lme4)
+    formString2 = paste( formString, " + (1 | pID / eID)" )
+    
+    model = lmer( eval( parse(text=formString2) ),
+                    data = .dat )
+    
+    t2 = NA
+
   }
-  
-  
-  ##### Fit Random-Effects Model #####
-  # fit random effects working model in metafor
-  # three-level model: https://stats.stackexchange.com/questions/116659/mixed-effects-meta-regression-with-nested-random-effects-in-metafor-vs-mixed-mod
-  # @@the random structure will be only two-level when doing exp-level 
-  model <- rma.mv( eval( parse(text=formString) ),
-                   V = V_mat,
-                   random = ~ 1 | pID / eID,
-                   data = .dat,
-                   sparse = TRUE)
-  
-  # above reports model-based (not robust) standard errors
-  
+
   # RVE standard errors
-  res <- conf_int(model, vcov = "CR2")
+  res = conf_int(model, vcov = "CR2")
   
   # @@decide on t vs. z (keep consistent with conf_int above)
   #pvals = 2 * pt( abs(res$beta) / res$SE, df = res$df, lower.tail = FALSE )
   pvals = 2 * pnorm( abs(res$beta) / res$SE, lower.tail = FALSE )
-  
-  # compare to model-based p-values
-  #cbind(pvals, model$pval)
   
   ##### Put Results in Dataframe #####
   est.string = paste( round( res$beta, digits ),
@@ -265,25 +279,25 @@ analyze_moderators = function( .dat,
                                  digits),
                       sep = " " )
   
-  tau.string = round( sqrt(model$tau2), digits)
+  tau.string = round( t2, digits)
   
   
-  new.row = data.frame( Analysis = analysis.name,
-                        Coefficient = row.names(res),
-                        n = nrow(.dat),  # complete-cases
-                        Est = est.string,
-                        Pval = format_stat(pvals, cutoffs = c(.1, .0001) ),
-                        Pval.Bonf = format_stat( pmin(pvals*n.tests, 1) ),
-                        Tau = tau.string )
+  new.chunk = data.frame( Analysis = analysis.label,
+                          Coefficient = row.names(res),
+                          n = nrow(.dat),  # complete-cases
+                          Est = est.string,
+                          Pval = format_stat(pvals, cutoffs = c(.1, .0001) ),
+                          Pval.Bonf = format_stat( pmin(pvals*n.tests, 1) ),
+                          Tau = tau.string )
   
   
   
   # this should be a global variable
-  if ( !exists("resE") ){
-    modTable <<- new.row
+  if ( !exists("modTable") ){
+    modTable <<- new.chunk
   } else {
     library(plyr)
-    modTable <<- rbind.fill(modTable, new.row)
+    modTable <<- rbind.fill(modTable, new.chunk)
     detach("package:plyr", unload=TRUE)
   }
 } 
