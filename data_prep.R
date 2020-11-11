@@ -172,7 +172,7 @@ analysisVars = analysisVars[ !analysisVars %in% c("Notes.x", "Notes.y")]
 
 # cast as numeric
 ( makeNumeric = stringsWith( c("origES", "repES", "Diff", "df", "origN", "repN", "Pval"), names(d2) ) )
-# bm: this is being a butt
+# this is being a butt
 d2 = d2 %>% mutate_at( .vars = makeNumeric, .funs = as.numeric )
 # warning is okay
 
@@ -228,9 +228,13 @@ d2$peID = paste( "p", d2$pID, "e", d2$eID, sep = "" )
 analysisVars = analysisVars[ !analysisVars %in% c("Notes, Organisms")]
 
 # @@maybe move this?
+# @@also, why are "repSignif", "origSignif" here?
 # moderators
-modVars = c("responseQuality", "expType", "labsContracted", "changesNeededProse", 
-         "repSignif", "origSignif", "reqAntibodies", "reqCells", "Organisms", 
+
+modVars = c("responseQuality", "expType", "labsContracted",
+            #"changesNeededProse", 
+         #"repSignif", "origSignif",
+         "reqAntibodies", "reqCells", "Organisms", 
          "reqPlasmids", "labType", "expAnimal")
 
 CreateTableOne( dat = d2 %>% select(analysisVars) %>%
@@ -497,22 +501,17 @@ write_interm(d3, "intermediate_dataset_step4.csv")
 
 ################################ 5. POOL WITHIN EXPERIMENTS (FOR EXPERIMENT-LEVEL DATASET) ################################ 
 
+
 # are moderators constant within peID?
+# note exclusion of the repSign
 nUniques = d3 %>%
   group_by(peID) %>%
   summarise( across(.cols = modVars,
                     .fns = uni ) ) %>%
   select(-peID)
 
+# all unique within peIDs :)
 any(nUniques  > 1)
-
-table(nUniques)
-
-#@@ **ask Tim: moderators aren't unique within experiments
-# so how will we do those analyses?
-table( unlist(as.data.frame(nUniques) ) )
-
-
 
 # number of replications per experiment
 # used below in sanity checks

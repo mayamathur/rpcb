@@ -158,12 +158,12 @@ analyze_one_row = function(origES2,
   ) )
 }
 
-x = dat[58,]
-analyze_one_row(x$origES2,
-                x$origVar2,
-                x$repES2,
-                x$repVar2,
-                x$ES2type)
+# x = dat[58,]
+# analyze_one_row(x$origES2,
+#                 x$origVar2,
+#                 x$repES2,
+#                 x$repVar2,
+#                 x$ES2type)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                   DATA-PREP HELPER                                #

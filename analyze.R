@@ -117,31 +117,241 @@ dat = dat %>%
 # quick look at results
 # stringsWith( pattern = "pw", x = names(dat) )
 # 
-# takeMean = c("pw.PIRepInside",
-#              "pw.PIRepInside.sens",
-#              "pw.Porig",
-#              "pw.PorigSens",
-#              "pw.ratio",
-#              "pw.PsigAgree1",
-#              "pw.FEest")
+takeMean = c("pw.PIRepInside",
+             "pw.PIRepInside.sens",
+             "pw.Porig",
+             "pw.PorigSens",
+             "pw.ratio",
+             "pw.PsigAgree1",
+             "pw.FEest")
 # this is broken:
 # res = dat %>% select(takeMean) %>%
 #   mutate( across( .cols = everything(),
 #                   .fns = mean) ) 
 
-#bm
 colMeans( dat %>% select(takeMean), na.rm = TRUE )
 
 
 ################################ SUMMARIES AFTER THE ABOVE ################################ 
 
 # FOREST PLOT
-
+#bm
 
 
 # TABLE of these metrics at the experiment level (~50 rows)
 
 # FIGURE: Similar to RPP with original estimates vs. replication estimates at all three levels of granularity (emphasizing experiment level, probably)
+
+
+#################################### FOREST PLOT ###################################
+
+
+# great info on dumbbell plot in ggplot:
+# https://towardsdatascience.com/create-dumbbell-plots-to-visualize-group-differences-in-r-3536b7d0a19a
+
+library(ggalt)
+library(tidyverse)
+
+dp = droplevels( dat %>% dplyr::filter( !is.na(origES2) & !is.na(repES2) & ES2type != "" ) %>%
+                   dplyr::filter(ES2type %in% c("Cohen's d", "Glass' delta", "Log hazard ratio", "Cohen's dz") ) )
+# randomly sample for testing purposes
+set.seed(2)
+dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
+#dp = dat[1:10,]
+dp$plotID = dp$peoID # with eye toward functionizing
+
+
+repColor <- "#0171CE"
+origColor <- "#DE4433"
+digits = 2
+
+stringPanelWidth = 3
+panelSpacer = 1
+
+max( c(dp$origES2, dp$repES2), na.rm = TRUE )  # use this to inform stringPanel1Start
+stringPanel1Start = 15  # an x-axis coordinate
+stringPanel1End = stringPanel1Start + stringPanelWidth  # x-axis 
+
+stringPanel2Start = stringPanel1End + panelSpacer
+stringPanel2End = stringPanel2Start + stringPanelWidth
+
+
+# for labeling joy, have a df with just the first row to appear in plot
+# which is actually the LAST row in the LAST ES2type
+temp = dp[ dp$ES2type == unique(dp$ES2type)[1], ]  
+# sort in order to match ggplot's ordering
+dpRow = temp[ temp$peoID == rev( sort(temp$peoID) )[1], ] 
+#dpRow = dp[ dp$plotID == dp$plotID[ nrow(dp) ], ]
+#dpRow = dp[ dp$plotID == dp$plotID[ 1 ], ]
+
+
+p = ggplot() + 
+  
+  facet_grid(ES2type ~ .,
+             scales = "free",
+             space = "free"
+             #space = "free_y"
+             ) +
+  
+  # null
+  geom_vline(xintercept = 0,
+             lty = 2,
+             color = "gray") +
+  
+  geom_segment(data = dp,
+               aes(y=plotID,
+                   yend=plotID,
+                   x=0,
+                   xend=.5),
+               color="#b2b2b2",
+               size=0.15) +
+  
+  geom_dumbbell(data=dp,
+                aes(y=plotID,
+                    x=origES2,
+                    xend=repES2),
+                size=1.5,
+                color="#b2b2b2",
+                size_x=3,
+                size_xend = 3,
+                colour_x = origColor,
+                colour_xend = repColor) +
+  
+  # "Original" and "Replication" labels
+  # data arg: only label one of the rows
+  geom_text( data= dpRow,
+             aes(x=repES2,
+                 y=plotID,
+                 label="Replication"),
+             color=repColor,
+             size=3,
+             vjust=-1.5,
+             fontface="bold") +
+  
+  geom_text( data= dpRow,
+             aes(x=origES2,
+                 y=plotID,
+                 label="Original"),
+             color=origColor,
+             size=3,
+             vjust=-1.5,
+             fontface="bold") +
+  
+  # numerical labels
+  geom_text(data=dp,
+            aes(x=repES2,
+                y=plotID,
+                label= round(repES2, digits) ),
+            color=repColor,
+            size=2.75,
+            vjust=2.5) +
+  
+  geom_text(data=dp,
+            aes(x=origES2,
+                y=plotID,
+                label= round(origES2, digits) ),
+            color=origColor,
+            size=2.75,
+            vjust=2.5) +
+  
+  ##### differences panel
+  geom_rect(data=dp,
+            aes(xmin=stringPanel1Start,  # hard-coded location
+                xmax=stringPanel1End,
+                ymin=-Inf,
+                ymax=Inf),
+            fill="grey") +
+  
+  geom_text(data=dp,
+            aes(label = round( origES2 - repES2, digits ),
+                y=plotID,
+                x= mean( c(stringPanel1Start, stringPanel1End) ) ),
+            #fontface="bold",
+            size=3) +
+  # header
+  geom_text(data=dpRow, 
+            aes(x=mean( c(stringPanel1Start, stringPanel1End) ),  # needs to match above
+                y=plotID,
+                label="Original - replication"),
+            color="black",
+            size=3.1,
+            vjust=-2,
+            fontface="bold") 
+  
+
+
+  # bm
+  # Porig panel
+  p + geom_rect(data=dp,
+            aes(xmin=stringPanel2Start,  # hard-coded location
+                xmax=stringPanel2End,
+                ymin=-Inf,
+                ymax=Inf),
+            fill="grey") +
+  
+  geom_text(data=dp,
+            aes(label = round( pw.Porig, digits ),
+                y=plotID,
+                x=mean( c(stringPanel2Start, stringPanel2End) ) ),
+            #fontface="bold",
+            size=3) +
+  
+  geom_text(data=dpRow, 
+            aes(x=mean( c(stringPanel2Start, stringPanel2End) ),  # needs to match above
+                y=plotID,
+                #label = TeX("$P_{orig}$")
+                label="Porig"
+                ),
+            #label = "asdfd",
+            #label = TeX("$P_{orig}$"),
+            #label = expression(paste("DOC (mg ", L^-1,")")),
+            color="black",
+            size=3.1,
+            vjust=-2,
+            fontface="bold") + 
+    
+    # basic prettifying
+    theme_bw() +
+    theme( panel.grid.major=element_blank(),
+           panel.grid.minor=element_blank() ) +
+    
+    xlab("Point estimate") +
+    ylab("Paper, experiment, and outcome")
+    
+    
+  
+  
+  
+  
+  
+  
+#   +
+#   
+#   # prettify
+#   theme_bw() +
+#   theme( panel.grid.major=element_blank(),
+#          panel.grid.minor=element_blank() )
+# 
+# 
+# # scale_x_continuous(expand=c(0,0), limits=c(0, .625)) +
+# # scale_y_discrete(expand=c(0.2,0))
+# 
+# p
+
+
+
+# # 15 x 9 works well
+# # save
+# setwd(objects.dir)
+# ggsave( "forest.pdf",
+#         width = 15,
+#         height = 10,
+#         units = "in" )
+# setwd(results.overleaf)
+# ggsave( "forest.pdf",
+#         width = 15,
+#         height = 9,
+#         units = "in" )
 
 
 
