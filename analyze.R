@@ -285,13 +285,9 @@ table(modTable$Problems)
 
 ################################ SUMMARIES AFTER THE ABOVE ################################ 
 
-# FOREST PLOT
-#bm
-
 
 # TABLE of these metrics at the experiment level (~50 rows)
 
-# FIGURE: Similar to RPP with original estimates vs. replication estimates at all three levels of granularity (emphasizing experiment level, probably)
 
 
 #################################### FOREST PLOT ###################################

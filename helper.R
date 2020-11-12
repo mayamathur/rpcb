@@ -756,6 +756,11 @@ searchBook = function(pattern){
 #  handles case where data have only 1 row
 robu2 = function(yi, vi) {
   
+  if ( any( is.na(yi) ) | any( is.na(vi) ) ) {
+    return( data.frame( est = NA, 
+                        var = NA ) )
+  }
+  
   dat = data.frame( yi, vi )
   
   # handle case with 1 row in dat
