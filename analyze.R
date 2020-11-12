@@ -13,6 +13,8 @@ library(MetaUtility)
 library(robumeta)
 library(testthat)
 library(Replicate)
+library(data.table)
+library(metafor)
 
 root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology"
 raw.data.dir = paste(root.dir, "Raw data", sep="/")
@@ -116,6 +118,35 @@ dat = dat %>%
                           repVar2,
                           ES2type) )
 
+# # ratio sanity checks:
+# # @@note that some ratios and their variances are extremely large:
+# inds = which(dat$pw.ratioVar > 100000)
+# dat$pw.ratio[inds]
+# 
+# i = 5
+# origES2 = dat$origES2[i]
+# origVar2 = dat$origVar2[i]
+# repES2 = dat$repES2[i]
+# repVar2 = dat$repVar2[i]
+# 
+# deltamethod( ~ x1/x2,
+#              mean = c( origES2, repES2 ), cov = diag( c(origVar2, repVar2) ) )^2
+
+
+# for ( i in 1:nrow(dat) ) {
+#   # debug any rows that are brats
+#   chunk = analyze_one_row( dat$origES2[i],
+#                    dat$origVar2[i], 
+#                    dat$repES2[i],
+#                    dat$repVar2[i],
+#                    dat$ES2type[i])
+#   if ( i == 1 ) res = chunk
+#   if ( i > 1) res = rbind(res, chunk)
+#   
+# }
+
+
+
 # quick look at results
 # stringsWith( pattern = "pw", x = names(dat) )
 # 
@@ -145,59 +176,109 @@ colMeans( dat %>% select(takeMean), na.rm = TRUE )
 # Type of replication lab (contract research organization [CRO] vs. academic core lab)
 # What was requested from original authors and the response? (scored subjectively; Likert scale)
 # Was a post hoc modification to protocol needed to complete the experiment? (col W in experiment level)
+
+#@@Might be problematic (think about):
 # N of original
 # ES of original
 
 
-# table(d$`Original test statistic type`)
 
-# moderator correlation matrix as in AWR
-mod.names = c("responseQuality",
-              "expType",
-              "reqAntibodies",
-              "reqCells",
-              "reqPlasmids",
-              "labType",
-              "expAnimal")
+##### Moderator Summary Table and Correlation Matrix #####
 
-##### analyze pairwise metrics that do have variances
-outcomesWithVar = c( "pw.ratio", 
-                     "pw.FEest")
+# must use dummies for labType here to get correlations
+modVars = c("expAnimal",
+            "labType_b.Both",
+            "labType_c.CRO.only",
+            "reqAntibodies",
+            "reqCells",
+            "reqPlasmids",
+            "responseQuality",
+            "changesNeeded")
 
-#bm
+CreateTableOne(vars = modVars, data = dat)
 
 
+library(corrr)
+corrs = dat %>% select(modVars) %>%
+  correlate( use = "pairwise.complete.obs" ) %>%
+  stretch() %>%
+  arrange(desc(r)) %>%
+  group_by(r) %>%
+  filter(row_number()==1)
 
-##### analyze pairwise metrics that don't have variances
-outcomesWithoutVar = c("pw.PIRepInside",
+
+corrs$r = round(corrs$r, 2)
+
+corrs = corrs[ !is.na(corrs$r), ]
+View(corrs)
+
+setwd(results.dir)
+setwd("Tables to prettify")
+write.csv(corrs, "moderator_cormat.csv")
+
+
+##### Analyze Pairwise Metrics That *Do* Have Variances #####
+
+# not surprisingly given its extreme values and variances, ratio doesn't really work here (V not positive definite)
+outcomesWithVar = c( #"pw.ratio", 
+  "pw.FEest")
+
+# clear the results table to be created
+if ( exists("modTable") ) rm(modTable)
+
+for ( i in outcomesWithVar ) {
+
+  modTable = safe_analyze_moderators(  .dat = dat,
+                            yi.name = i,
+                            # below assumes a standardized naming convention for
+                            #  variances of the pairwise metrics:
+                            vi.name = paste(i, "Var", sep=""),
+                            
+                            # cut out the "pw." part of outcome name
+                            analysis.label = strsplit(i, "[.]")[[1]][2],
+                            
+                            modVars = modVars,
+                            
+                            n.tests = length(modVars),
+                            digits = 2 )
+  
+}
+
+
+modTable
+table(modTable$Problems)
+
+
+##### Analyze Pairwise Metrics That *Don't* Have Variances #####
+
+outcomesWithoutVar = c("pw.ratio",
+                       "pw.PIRepInside",
                        "pw.PIRepInside.sens",
                        "pw.Porig",
                        "pw.PorigSens",
                        "pw.PsigAgree1")
 
-if ( exists("modTable") ) rm(modTable)
+#if ( exists("modTable") ) rm(modTable)
 
 for ( i in outcomesWithoutVar ) {
-  analyze_moderators(  .dat = dat,
-                       yi.name = i,
-                       vi.name = NA,
-                       
-                       # cut out the "pw." part of outcome name
-                       analysis.label = strsplit(i, "[.]")[[1]][2],
-                       
-                       mod.names = c("responseQuality",
-                                     "reqAntibodies",
-                                     "reqCells",
-                                     "reqPlasmids",
-                                     "labType",
-                                     "expAnimal"),
-                       
-                       n.tests = length(mod.names),
-                       digits = 2 )
+  modTable = safe_analyze_moderators(  .dat = dat,
+                                       yi.name = i,
+                                       # below assumes a standardized naming convention for
+                                       vi.name = NA,
+                                       
+                                       # cut out the "pw." part of outcome name
+                                       analysis.label = strsplit(i, "[.]")[[1]][2],
+                                       
+                                       modVars = modVars,
+                                       
+                                       n.tests = length(modVars),
+                                       digits = 2 )
 }
 
 
-modTable
+# for some reason, the FE problems get deleted
+View(modTable)
+table(modTable$Problems)
 
 
 ################################ SUMMARIES AFTER THE ABOVE ################################ 

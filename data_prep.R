@@ -153,7 +153,7 @@ d2 = d %>% rename( pID = "Paper #",
                    materialsRequested = "Key materials asked to be shared",
                    responseQuality = "Quality of response from original authors",
                    # when this is NA, no mods were needed:
-                   changesNeededProse = "If modifications were needed for experiment to proceed, what were they?" )
+                   changesNeededProse = "If modifications were needed for experiment to proceed, what were they?")
 
 # save intermediate dataset for easy debugging
 write_interm(d2, "intermediate_dataset_step1.csv")
@@ -189,6 +189,9 @@ table(d2$origSignif, d2$origDirection)
 d2$origDirection[ d2$origDirection == "" ] = NA
 d2$repDirection[ d2$repDirection == "" ] = NA
 
+# recode "changes needed" variable
+d2$changesNeeded = !is.na(d2$changesNeededProse)
+
 # make dummies from variables coded as comma-separated categories
 # @IMPORTANT: note that response quality coding exists even if no materials were requested
 table( is.na(d2$materialsRequested), d2$responseQuality )  
@@ -208,6 +211,11 @@ d2$labType[ hasCRO & hasCore ] = "b.Both"
 d2$labType[ !hasCRO & hasCore ] = "a.Core only"
 # sanity check
 table(d2$labsContracted, d2$labType)
+
+# dummy-coded version of labType
+# only used for making the moderator correlation matrix
+library(fastDummies)
+d2 = dummy_cols(.data = d2, select_columns = "labType")
 
 # recode experiment type as animal vs. non-animal
 d2$expAnimal = (d2$expType == "Animal")
@@ -231,11 +239,13 @@ analysisVars = analysisVars[ !analysisVars %in% c("Notes, Organisms")]
 # @@also, why are "repSignif", "origSignif" here?
 # moderators
 
-modVars = c("responseQuality", "expType", "labsContracted",
-            #"changesNeededProse", 
-         #"repSignif", "origSignif",
-         "reqAntibodies", "reqCells", "Organisms", 
-         "reqPlasmids", "labType", "expAnimal")
+modVars = c("expAnimal",
+              "labType",
+              "reqAntibodies",
+              "reqCells",
+              "reqPlasmids",
+              "responseQuality",
+              "changesNeeded")
 
 CreateTableOne( dat = d2 %>% select(analysisVars) %>%
                   select( -c("changesNeededProse", stringsWith("ID", names(d2) ) ) ) )
@@ -600,5 +610,4 @@ fwrite(d3, "prepped_outcome_level_data.csv")
 # @@not done yet
 
 
-# calculate prediction intervals from original
 
