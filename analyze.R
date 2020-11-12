@@ -280,6 +280,8 @@ for ( i in outcomesWithoutVar ) {
 View(modTable)
 table(modTable$Problems)
 
+# @@think about ratio problem: maybe instead use difference, but controlling for original ES?
+
 
 ################################ SUMMARIES AFTER THE ABOVE ################################ 
 
