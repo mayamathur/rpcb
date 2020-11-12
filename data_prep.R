@@ -508,127 +508,127 @@ d3 = d2[ !duplicated(d2$peoID), ]
 write_interm(d3, "intermediate_dataset_step4.csv")
 
 
-################################ 5. POOL WITHIN EXPERIMENTS (FOR EXPERIMENT-LEVEL DATASET) ################################ 
-
-# read back in
-d3 = read_interm("intermediate_dataset_step4.csv")
-
-# look at which analysis variables are vs. aren't static within experiments
-# non-static ones will have to be overwritten
-( analysisVars = names(d2)[ !whichStrings("[.]", names(d2)) ] )
-analysisVars = analysisVars[ !analysisVars %in% c("Notes.x", "Notes.y")]
-
-
-analysisVars = analysisVars[ !analysisVars == "peID"]
-
-nUniques = d3 %>%
-  group_by(peID) %>%
-  summarise( across(.cols = everything(),
-                    .fns = uni ) ) %>%
-  # summarise( across(.cols = all_of(analysisVars),
-  #                   .fns = uni ) ) %>%
-  select(-peID)
-
-varies = apply( nUniques, 2, function(x) any(x>1) ) == TRUE
-( varyingVars = names(varies)[varies == TRUE] )
-names(varies)[varies == FALSE]
-
-# expect all moderators to be static within experiments
-#  per Tim
-expect_equal( TRUE, all( varies[ names(varies) %in% modVars ] == FALSE ) )
-
-
-
-# number of replications per experiment
-# used below in sanity checks
-t = d3 %>%
-  filter(!is.na(repES2) & !is.na(origES2)) %>%
-  group_by(peID) %>%
-  summarise(n = n())
-table(t$n)
-# @@max 12 outcomes; sanity-check with Tim
-
-
-##### Pool outcomes via RE meta-analysis #####
-# note that this is RE meta-analysis rather than FE as for the internal replications
-# kept separate from d2 for now to facilitate sanity checks
-# temp has same dimensions as d3
-# temp = d3 %>%
+# ################################ 5. POOL WITHIN EXPERIMENTS (FOR EXPERIMENT-LEVEL DATASET) ################################ 
+# 
+# # read back in
+# d3 = read_interm("intermediate_dataset_step4.csv")
+# 
+# # look at which analysis variables are vs. aren't static within experiments
+# # non-static ones will have to be overwritten
+# ( analysisVars = names(d2)[ !whichStrings("[.]", names(d2)) ] )
+# analysisVars = analysisVars[ !analysisVars %in% c("Notes.x", "Notes.y")]
+# 
+# 
+# analysisVars = analysisVars[ !analysisVars == "peID"]
+# 
+# nUniques = d3 %>%
+#   group_by(peID) %>%
+#   summarise( across(.cols = everything(),
+#                     .fns = uni ) ) %>%
+#   # summarise( across(.cols = all_of(analysisVars),
+#   #                   .fns = uni ) ) %>%
+#   select(-peID)
+# 
+# varies = apply( nUniques, 2, function(x) any(x>1) ) == TRUE
+# ( varyingVars = names(varies)[varies == TRUE] )
+# names(varies)[varies == FALSE]
+# 
+# # expect all moderators to be static within experiments
+# #  per Tim
+# expect_equal( TRUE, all( varies[ names(varies) %in% modVars ] == FALSE ) )
+# 
+# 
+# 
+# # number of replications per experiment
+# # used below in sanity checks
+# t = d3 %>%
 #   filter(!is.na(repES2) & !is.na(origES2)) %>%
 #   group_by(peID) %>%
-#   mutate( robu2(yi = repES2, vi = repVar2) ) 
-
-# robu2 adds columns "est" and "var"
-temp = d3 %>%
-  #filter(!is.na(repES2) & !is.na(origES2)) %>%
-  group_by(peID) %>%
-  mutate( robu2(yi = repES2, vi = repVar2) )
-
-
-#  come back...
-
-##### Sanity checks #####
-
-if ( run.sanity == TRUE ) {
-  # manually reproduce the first non-NA one
-  id = 2
-  temp$peID[id]
-
-  mod = robu( repES2 ~ 1,
-              var.eff.size = repVar2,
-              data = d3 %>% filter( peID == temp$peID[id]),
-              studynum = 1:nrow(d3 %>% filter( peID == temp$peID[id])),
-              small = TRUE )
-  
-  expect_equal( as.numeric(mod$b.r), unique( temp$est[ temp$peID == temp$peID[id]] ) )
-  expect_equal( as.numeric(mod$reg_table$SE^2), unique( temp$var[ temp$peID == temp$peID[id]] ) )        
-}            
-
-
-###### Overwrite the d2 variables with pooled ones #####
-
-# begin an experiment-level version of d3
-# for safety, remove all variables that vary within experiments except ID variables
-varyingVars[ !varyingVars %in% c("oID", "peoID") ]
-d3e = d3 %>% select( -all_of( varyingVars ) )
-names(d3e)
-
-expect_equal(nrow(temp), nrow(d3e))
-
-# variables that need to be recalculated if they will be used in analysis:
-varyingVars
-
-# calculate new variables
-d3e$repES2 = temp$est
-d3e$repVar2 = temp$var
-d3e$repSE2 = sqrt(temp$FEvar)
-d3e$repSignif
-
-
-
-
-d3e$repPval
-
-d3e$origESLo2
-d3e$origESHi2
-d3e$origPval
-
-d3e$repESLo
-d3e$repESHi
-d3e$repPval
-
-d3e$repSignif
-d3e$origSignif
-
-# keep only 1 row per outcome (collapse over internal replications)
-d3e = d3e[ !duplicated(d2$peID), ]
-
-# @@ any other vars that change within pe need to be dealt with here, 
-#  such as replication p-value, etc.
-# BEWARE: variables like this are currently the FIRST value within that peID, 
-#  not the ones from pooling
-
+#   summarise(n = n())
+# table(t$n)
+# # @@max 12 outcomes; sanity-check with Tim
 # 
+# 
+# ##### Pool outcomes via RE meta-analysis #####
+# # note that this is RE meta-analysis rather than FE as for the internal replications
+# # kept separate from d2 for now to facilitate sanity checks
+# # temp has same dimensions as d3
+# # temp = d3 %>%
+# #   filter(!is.na(repES2) & !is.na(origES2)) %>%
+# #   group_by(peID) %>%
+# #   mutate( robu2(yi = repES2, vi = repVar2) ) 
+# 
+# # robu2 adds columns "est" and "var"
+# temp = d3 %>%
+#   #filter(!is.na(repES2) & !is.na(origES2)) %>%
+#   group_by(peID) %>%
+#   mutate( robu2(yi = repES2, vi = repVar2) )
+# 
+# 
+# #  come back...
+# 
+# ##### Sanity checks #####
+# 
+# if ( run.sanity == TRUE ) {
+#   # manually reproduce the first non-NA one
+#   id = 2
+#   temp$peID[id]
+# 
+#   mod = robu( repES2 ~ 1,
+#               var.eff.size = repVar2,
+#               data = d3 %>% filter( peID == temp$peID[id]),
+#               studynum = 1:nrow(d3 %>% filter( peID == temp$peID[id])),
+#               small = TRUE )
+#   
+#   expect_equal( as.numeric(mod$b.r), unique( temp$est[ temp$peID == temp$peID[id]] ) )
+#   expect_equal( as.numeric(mod$reg_table$SE^2), unique( temp$var[ temp$peID == temp$peID[id]] ) )        
+# }            
+# 
+# 
+# ###### Overwrite the d2 variables with pooled ones #####
+# 
+# # begin an experiment-level version of d3
+# # for safety, remove all variables that vary within experiments except ID variables
+# varyingVars[ !varyingVars %in% c("oID", "peoID") ]
+# d3e = d3 %>% select( -all_of( varyingVars ) )
+# names(d3e)
+# 
+# expect_equal(nrow(temp), nrow(d3e))
+# 
+# # variables that need to be recalculated if they will be used in analysis:
+# varyingVars
+# 
+# # calculate new variables
+# d3e$repES2 = temp$est
+# d3e$repVar2 = temp$var
+# d3e$repSE2 = sqrt(temp$FEvar)
+# d3e$repSignif
+# 
+# 
+# 
+# 
+# d3e$repPval
+# 
+# d3e$origESLo2
+# d3e$origESHi2
+# d3e$origPval
+# 
+# d3e$repESLo
+# d3e$repESHi
+# d3e$repPval
+# 
+# d3e$repSignif
+# d3e$origSignif
+# 
+# # keep only 1 row per outcome (collapse over internal replications)
+# d3e = d3e[ !duplicated(d2$peID), ]
+# 
+# # @@ any other vars that change within pe need to be dealt with here, 
+# #  such as replication p-value, etc.
+# # BEWARE: variables like this are currently the FIRST value within that peID, 
+# #  not the ones from pooling
+# 
+# # 
 
 
 ################################ 6. SAVE ANALYSIS DATASETS ################################ 

@@ -110,6 +110,7 @@ sum( dat$repDirection == "Positive" )
 
 
 # dataset has already been aggregated to either the outcome- or the experiment-level
+# if this hits errors, it's likely that you have mismatches in the NA dataframe vs. the filled-in one in analyze_one_row
 dat = dat %>% 
   rowwise() %>% 
   mutate( analyze_one_row(origES2,
@@ -131,43 +132,26 @@ dat = dat %>%
 # 
 # deltamethod( ~ x1/x2,
 #              mean = c( origES2, repES2 ), cov = diag( c(origVar2, repVar2) ) )^2
-
-
+# 
+# 
 # for ( i in 1:nrow(dat) ) {
 #   # debug any rows that are brats
 #   chunk = analyze_one_row( dat$origES2[i],
-#                    dat$origVar2[i], 
+#                    dat$origVar2[i],
 #                    dat$repES2[i],
 #                    dat$repVar2[i],
 #                    dat$ES2type[i])
 #   if ( i == 1 ) res = chunk
 #   if ( i > 1) res = rbind(res, chunk)
-#   
+# 
 # }
 
 
 
-# quick look at results
-# stringsWith( pattern = "pw", x = names(dat) )
-# 
-takeMean = c("pw.PIRepInside",
-             "pw.PIRepInside.sens",
-             "pw.Porig",
-             "pw.PorigSens",
-             "pw.ratio",
-             "pw.PsigAgree1",
-             "pw.FEest")
-# this is broken:
-# res = dat %>% select(takeMean) %>%
-#   mutate( across( .cols = everything(),
-#                   .fns = mean) ) 
-
-colMeans( dat %>% select(takeMean), na.rm = TRUE )
-
-
 ################################ META-REGRESSION ################################ 
 
-# only experiment-level 
+# moderators are at experiment-level, but analysis is at outcome level with 
+#  nesting to handle experiment-level and paper-level correlation structure
 
 # We will report the above metrics for each pair. Additionally, to summarize the above three metrics across pairs while accounting for their possible non-independence, we will robustly meta-regress each metric in a manner that accounts for clustering within original studies (Hedges et al., 2010). This model provides asymptotically correct inference even when the clustering structure is misspecified, which is important here because of the difficulty of precisely specifying the complex nature of clustering. This will yield average values of Porig, the difference, and the fixed-effects pooled estimate across all pairs. 
 
@@ -283,10 +267,81 @@ table(modTable$Problems)
 # @@think about ratio problem: maybe instead use difference, but controlling for original ES?
 
 
-################################ SUMMARIES AFTER THE ABOVE ################################ 
+################################ TABLE: EXPT-LEVEL SUMMARIES OF PAIRWISE METRICS ################################ 
 
 
 # TABLE of these metrics at the experiment level (~50 rows)
+
+#bm
+# quick look at results
+# stringsWith( pattern = "pw", x = names(dat) )
+# 
+takeMean = c("pw.PIRepInside",  # function: 
+             "pw.PIRepInside.sens",
+             "pw.Porig",
+             "pw.PorigSens",
+             "pw.ratio",
+             "pw.PsigAgree1",
+             "pw.FEest")
+# this is broken:
+# res = dat %>% select(takeMean) %>%
+#   mutate( across( .cols = everything(),
+#                   .fns = mean) ) 
+
+# x: vector of 0/1s
+# @@note that this removes NAs
+
+n_perc_string = function(x, digits = 0) {
+  if ( all( is.na(x) ) ) return("All missing")
+  x = x[!is.na(x)]
+  paste( sum(x), " (", round( 100 * mean(x), digits ), "%)", sep = "" )
+}
+n_perc_string( c(0,0,0,0,1,1,1,0,0) )
+
+harmonic_p = function(x) {
+  library(harmonicmeanp)
+  if ( all( is.na(x) ) ) return(NA)
+  # @@note: better use p.hmp here becuase it's asymptotically exact,
+  #  but it was giving error messages
+  hmp.stat( x[ !is.na(x) ] ) 
+}
+
+#bm: instead of doing strings, should use numbers throughout and then post-process
+#  that way we can use these in the plot
+RE_string = function(yi, vi, digits = 2) {
+  mod = rma.uni(yi = yi,
+                vi = vi,
+                method = "REML")
+  
+  paste( round( mod$b, digits ), 
+}
+
+# aggregation fns: 
+# plain mean (ratio)
+# count and percent (repinside, PsigAGree)
+# FE analysis (origES2, repES2, FEest)
+# harmonic mean p-value (porig)
+
+expTable = dat %>% group_by(peID) %>%
+  summarise( nOutcomes = n(),
+             
+             FEEst
+             Ratio = round( mean(pw.ratio), 2 ),
+             
+             PIRepInside = n_perc_string(pw.PIRepInside),
+             PIRepInside.sens = n_perc_string(pw.PIRepInside.sens), 
+             # @@note: better use p.hmp here becuase it's asymptotically exact,
+             #  but it was giving error messages
+             Porig = harmonic_p( pw.Porig ),
+             Porig.sens = harmonic_p( pw.PorigSens ),
+             
+             # overall proportion (within this experiment) expected to agree
+             # @@insert actual sig agreement
+             SigAgree = n_perc_string( repSignif == origSignif & repDirection == origDirection),
+             PercSigAgree1 = paste( round( 100 * mean(pw.PsigAgree1), 0 ), "%", sep ="" )
+  ) 
+
+View(expTable)
 
 
 

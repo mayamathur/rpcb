@@ -169,7 +169,7 @@ analyze_one_row = function(origES2,
                       pw.PsigAgree1 = PsigAgree1,
                       
                       pw.FEest = as.numeric( FEmod$b ),
-                      pw.FEvar = as.numeric( FEmod$se^2 ),
+                      pw.FEestVar = as.numeric( FEmod$se^2 ),
                       pw.FElo = as.numeric( FEmod$ci.lb ), 
                       pw.FEhi = as.numeric( FEmod$ci.ub )
   ) )
