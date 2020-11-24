@@ -84,7 +84,7 @@ sum( dat$repDirection == "Positive" )
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#              MAIN PAIRWISE METRICS (COMPLETED QUANT PAIRS)                        #
+#              2. MAIN PAIRWISE METRICS (COMPLETED QUANT PAIRS)                        #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 ################################ CALCULATE PAIRWISE METRICS ################################ 
@@ -146,6 +146,7 @@ dat = dat %>%
 # 
 # }
 
+write_interm(dat, "intermediate_analysis_dataset_step2.csv")
 
 
 ################################ META-REGRESSION ################################ 
@@ -307,7 +308,7 @@ harmonic_p = function(x) {
 }
 
 #bm: instead of doing strings, should use numbers throughout and then post-process
-#  that way we can use these in the plot
+#  that way we can use these in the plots
 RE_string = function(yi, vi, digits = 2) {
   mod = rma.uni(yi = yi,
                 vi = vi,
@@ -345,11 +346,14 @@ View(expTable)
 
 
 
-#################################### FOREST PLOT ###################################
+#################################### DUMBBELL PLOT ###################################
 
 
 # great info on dumbbell plot in ggplot:
 # https://towardsdatascience.com/create-dumbbell-plots-to-visualize-group-differences-in-r-3536b7d0a19a
+
+dat = read_interm("intermediate_analysis_dataset_step2.csv")
+
 
 library(ggalt)
 library(tidyverse)
@@ -538,6 +542,145 @@ p + geom_rect(data=dp,
 #         width = 15,
 #         height = 9,
 #         units = "in" )
+
+
+
+#################################### RPP-STYLE SCATTERPLOT ###################################
+
+#BM
+
+# great info on dumbbell plot in ggplot:
+# https://towardsdatascience.com/create-dumbbell-plots-to-visualize-group-differences-in-r-3536b7d0a19a
+
+dat = read_interm("intermediate_analysis_dataset_step2.csv")
+
+
+library(ggalt)
+library(tidyverse)
+
+# group certain ES together in plot
+dat$ESgroup = NA
+dat$ESgroup[ dat$ES2type %in% c("Cohen's d", "Glass' delta", "Cohen's dz") ] = "SMD"
+dat$ESgroup[ dat$ES2type == "Log hazard ratio" ] = "Log hazard ratio"
+dat$ESgroup[ dat$ES2type == "Fisher's z" ] = "Fisher's z"
+table(dat$ES2type, dat$ESgroup)
+
+dp = droplevels( dat %>% dplyr::filter( !is.na(origES2) & !is.na(repES2) & !is.na(ESgroup) ) )
+                   
+# # randomly sample for testing purposes
+# set.seed(2)
+# dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
+# #dp = dat[1:10,]
+dp$plotID = dp$peoID # with eye toward functionizing
+
+
+
+##### Lower Panel: RPP-style scatterplots ######
+p = ggplot() + 
+  
+  facet_grid(. ~ ESgroup,
+             scales = "free",
+             space = "fixed"
+             #space = "free_y"
+  ) +
+
+  # null
+  geom_abline(intercept = 0,
+             slope = 1,
+             lty = 2,
+             color = "gray") +
+
+  
+  geom_point( data = dp,
+              aes(x = origES2,
+                  y = repES2)) +
+  
+# basic prettifying
+theme_bw() +
+  theme( panel.grid.major=element_blank(),
+         panel.grid.minor=element_blank() ) +
+  
+  xlab("Original study estimate") +
+  ylab("Replication study estimate")
+
+
+
+##### Upper Panel: Ordered differences ######
+
+dp = dp %>% filter( !is.na(ESgroup) ) %>%
+  arrange(desc(repES2 / origES2))
+
+dp$ind = 1:nrow(dp)
+
+
+# only use CI if variance of ratio is less than 10
+
+p = ggplot() +
+  
+  # null
+  geom_hline(yintercept = 100,
+              lty = 2,
+              color = "gray") +
+  
+  
+  geom_point( data = dp,
+              aes(x = ind,
+                  y = 100*(repES2 / origES2),
+                  color = ESgroup) ) +
+  
+  # geom_errorbar( data = dp,
+  #                aes(ymin = pw.ratio - qnorm(.975) * pw.ratioVar,
+  #                    ymax = pw.ratio + qnorm(.975) * pw.ratioVar,
+  #                    color = ESgroup) ) +
+  
+  scale_y_log10() +
+  
+  # basic prettifying
+  theme_bw() +
+  theme( panel.grid.major=element_blank(),
+         panel.grid.minor=element_blank() ) +
+  
+  ylab("Replication percent of original (logged axis)")
+
+
+
+##### Upper Panel: Ordered ratios ######
+
+dp = dp %>% filter( !is.na(ESgroup) ) %>%
+  arrange(desc(repES2 / origES2))
+
+dp$ind = 1:nrow(dp)
+
+
+# only use CI if variance of ratio is less than 10
+
+p = ggplot() +
+  
+  # null
+  geom_hline(yintercept = 100,
+             lty = 2,
+             color = "gray") +
+  
+  
+  geom_point( data = dp,
+              aes(x = ind,
+                  y = 100*(repES2 / origES2),
+                  color = ESgroup) ) +
+  
+  # geom_errorbar( data = dp,
+  #                aes(ymin = pw.ratio - qnorm(.975) * pw.ratioVar,
+  #                    ymax = pw.ratio + qnorm(.975) * pw.ratioVar,
+  #                    color = ESgroup) ) +
+  
+  scale_y_log10() +
+  
+  # basic prettifying
+  theme_bw() +
+  theme( panel.grid.major=element_blank(),
+         panel.grid.minor=element_blank() ) +
+  
+  ylab("Replication percent of original (logged axis)")
+
 
 
 
