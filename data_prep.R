@@ -35,9 +35,9 @@ run.sanity = FALSE
 # read in paper-, experiment-, and outcome-level data
 setwd(raw.data.dir)
 # we won't actually be using the first of these
-dp = read_xlsx("2020_10_5_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
-de = read_xlsx("2020_10_5_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
-do = read_xlsx("2020_10_5_raw_data.xlsx", sheet = "Outcome level data"); nrow(do)
+dp = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
+de = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
+do = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Outcome level data"); nrow(do)
 
 ##### Sanity Checks on Hierarchical Data Structure #####
 # nesting levels: paper > experiment > outcome
