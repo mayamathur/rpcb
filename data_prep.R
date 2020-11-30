@@ -16,7 +16,7 @@ library(data.table)
 library(tableone)
 library(qdapTools)
 library(metafor)
-
+library(fastDummies)
 
 root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology"
 raw.data.dir = paste(root.dir, "Raw data", sep="/")
@@ -42,17 +42,17 @@ do = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Outcome level data"); nrow(d
 ##### Sanity Checks on Hierarchical Data Structure #####
 # nesting levels: paper > experiment > outcome
 names(de)
-# exp-level data have 196 unique paper-exp combos:
+# exp-level data have 193 unique paper-exp combos
 uni( paste(de$`Paper #`, de$`Experiment #` ) )
 # and 53 papers
 uni(de$`Paper #`)
 
-# outcome-level data have only 50 unique paper-exp combos:
+# outcome-level data have only 50 unique paper-exp combos
 uni( paste(do$`Paper #`, do$`Experiment #` ) ) 
 # and 23 papers
 uni(do$`Paper #`)
 
-# outcome-level only contains ones with quantitative effect sizes:
+# outcome-level only contains ones with quantitative effect sizes
 table( is.na(do$`Original effect size`))
 
 # confirm that outcome-level data have all papers from exp-level data for 
@@ -91,15 +91,14 @@ nrow(d)
 ##### Merge Codebooks for Easy Searching #####
 
 # # this only had to be done once
+# setwd(raw.data.dir)
 # for ( i in c("Paper level data dictionary",
 #              "Experiment level data dictionar",  # Excel cuts off last char
 #              "Outcome level data dictionary") ){
-#   cdNew = read_xlsx("2020_10_5_raw_data.xlsx", sheet = i)
+#   cdNew = read_xlsx("2020_11_30_raw_data.xlsx", sheet = i)
 #   cdNew$dataset = i
 #   if ( i == "Paper level data dictionary" ) cd = cdNew else cd = rbind(cd, cdNew)
 # }
-# 
-# setwd(raw.data.dir)
 # fwrite(cd, "codebook_merged.csv")
 
 # read in codebook for easy searching
@@ -215,11 +214,15 @@ table(d2$labsContracted, d2$labType)
 
 # dummy-coded version of labType
 # only used for making the moderator correlation matrix
-library(fastDummies)
 d2 = dummy_cols(.data = d2, select_columns = "labType")
 
 # recode experiment type as animal vs. non-animal
 d2$expAnimal = (d2$expType == "Animal")
+
+# indicator for being a completed quantitative pair
+# should be 138 per Tim
+d2$quantPair = !is.na(d2$origES) & !is.na(d2$repES)
+expect_equal( sum(d2$quantPair), 138 )
 
 # ID for paper-exp-outcome combos
 d2$peoID = paste( "p", d2$pID, "e", d2$eID, "o", d2$oID, sep = "")
@@ -250,7 +253,6 @@ CreateTableOne( dat = d2 %>% select(analysisVars) %>%
                   select( -c("changesNeededProse", stringsWith("ID", names(d2) ) ) ) )
 
 
-
 # save intermediate dataset for easy debugging
 write_interm(d2, "intermediate_dataset_step2.csv")
 
@@ -262,6 +264,16 @@ d2 = read_interm("intermediate_dataset_step2.csv")
 
 ##### Sanity checks on effect types #####
 
+# breakdown of ES types
+# sanity check:
+# Tim said "For awareness, we are at 90 Cohen's d, 15 Cohen's dz, 20 Glass' delta, 6 Pearson's r, and 7 Hazard ratios for effects where there are quantitative pairs (this is counting them as unique paper/experiment/effect/internal replication, so naturally this goes down as they are collapsed on any of those elements for analysis/visualization)."
+# that totals 138
+d2 %>% filter( quantPair == TRUE ) %>%
+  group_by(EStype) %>%
+  summarise(n())
+# matches :)
+
+# look at which statistical tests yielded which effect size types
 t = d2 %>% group_by(EStype, Statistical.test.applied.to.original.data) %>%
   summarise(n())
 
