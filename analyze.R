@@ -15,13 +15,18 @@ library(testthat)
 library(Replicate)
 library(data.table)
 library(metafor)
+library(here)
 
+# @@fix relative path problem:
+#set_here("~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology")
+# here()
 root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology"
 raw.data.dir = paste(root.dir, "Raw data", sep="/")
 prepped.data.dir = paste(root.dir, "Prepped data", sep="/")
 code.dir = paste(root.dir, "Code (git)", sep="/")
 results.dir = paste(root.dir, "Results from R", sep="/")
 
+# no sci notation
 options(scipen=999)
 
 setwd(code.dir)
@@ -55,16 +60,6 @@ cd = fread("codebook_merged.csv")
 #                          expN0 = max(`Experiment #`, na.rm = TRUE),
 #                          max(`Study #`, na.rm = TRUE) ) )
 
-
-#################################### 
-
-# We will conduct the main analyses at two levels of granularity (outcome-level and experiment-level). 
-
-
-# distinctions in analysis:
-#  - completed pairs (has realized replication outcome) vs. all pairs
-
-# 
 
 # with eye toward functionizing everything later (so we can do for outcome- and exp-level):
 dat = d
@@ -113,11 +108,10 @@ sum( dat$repDirection == "Positive" )
 # if this hits errors, it's likely that you have mismatches in the NA dataframe vs. the filled-in one in analyze_one_row
 dat = dat %>% 
   rowwise() %>% 
-  mutate( analyze_one_row(origES2,
-                          origVar2, 
-                          repES2,
-                          repVar2,
-                          ES2type) )
+  mutate( analyze_one_row(origES3,
+                          origVar3, 
+                          repES3,
+                          repVar3) )
 
 # # ratio sanity checks:
 # # @@note that some ratios and their variances are extremely large:
@@ -182,7 +176,7 @@ modVars = c("expAnimal",
 
 CreateTableOne(vars = modVars, data = dat)
 
-
+# moderator correlation matrix
 library(corrr)
 corrs = dat %>% select(modVars) %>%
   correlate( use = "pairwise.complete.obs" ) %>%
@@ -190,7 +184,6 @@ corrs = dat %>% select(modVars) %>%
   arrange(desc(r)) %>%
   group_by(r) %>%
   filter(row_number()==1)
-
 
 corrs$r = round(corrs$r, 2)
 
@@ -205,27 +198,27 @@ write.csv(corrs, "moderator_cormat.csv")
 ##### Analyze Pairwise Metrics That *Do* Have Variances #####
 
 # not surprisingly given its extreme values and variances, ratio doesn't really work here (V not positive definite)
-outcomesWithVar = c( #"pw.ratio", 
-  "pw.FEest")
+outcomesWithVar = c( "pw.diff",
+                     "pw.FEest")
 
 # clear the results table to be created
 if ( exists("modTable") ) rm(modTable)
 
 for ( i in outcomesWithVar ) {
-
+  
   modTable = safe_analyze_moderators(  .dat = dat,
-                            yi.name = i,
-                            # below assumes a standardized naming convention for
-                            #  variances of the pairwise metrics:
-                            vi.name = paste(i, "Var", sep=""),
-                            
-                            # cut out the "pw." part of outcome name
-                            analysis.label = strsplit(i, "[.]")[[1]][2],
-                            
-                            modVars = modVars,
-                            
-                            n.tests = length(modVars),
-                            digits = 2 )
+                                       yi.name = i,
+                                       # below assumes a standardized naming convention for
+                                       #  variances of the pairwise metrics:
+                                       vi.name = paste(i, "Var", sep=""),
+                                       
+                                       # cut out the "pw." part of outcome name
+                                       analysis.label = strsplit(i, "[.]")[[1]][2],
+                                       
+                                       modVars = modVars,
+                                       
+                                       n.tests = length(modVars),
+                                       digits = 2 )
   
 }
 
@@ -282,6 +275,7 @@ takeMean = c("pw.PIRepInside",  # function:
              "pw.Porig",
              "pw.PorigSens",
              "pw.ratio",
+             "pw.diff",
              "pw.PsigAgree1",
              "pw.FEest")
 # this is broken:

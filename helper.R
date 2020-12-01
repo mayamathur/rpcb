@@ -5,17 +5,14 @@
 
 
 # calculates pairwise metrics for one row of data (whether at outcome- or experiment-level)
-analyze_one_row = function(origES2,
-                           origVar2, 
-                           repES2,
-                           repVar2,
-                           ES2type){
+analyze_one_row = function(origES3,
+                           origVar3, 
+                           repES3,
+                           repVar3){
   
-  # test only
-  #x = dat[1,]
   
   # note: need to keep these variables matching with those in the eventual return
-  if( is.na(origES2) | is.na(origVar2) | is.na(repES2) | is.na(repVar2) ) {
+  if ( is.na(origES3) | is.na(origVar3) | is.na(repES3) | is.na(repVar3) ) {
     return( data.frame( pw.PILo = NA,
                         pw.PIHi = NA,
                         pw.PIRepInside = NA,
@@ -32,6 +29,9 @@ analyze_one_row = function(origES2,
                         #  to be recognized by analyze_moderators later
                         pw.ratioVar = NA,
                         
+                        pw.diff = NA,
+                        pw.diffVar = NA,
+                        
                         pw.PsigAgree1 = NA,
                         
                         pw.FEest = NA,
@@ -42,55 +42,47 @@ analyze_one_row = function(origES2,
   }
   
   # prediction interval with t2 = 0
-  predInt = pred_int( yio = origES2,
-                      vio = origVar2,
-                      yir = repES2,
-                      vir = repVar2 )
+  predInt = pred_int( yio = origES3,
+                      vio = origVar3,
+                      yir = repES3,
+                      vir = repVar3 )
   
   # Porig with t2 = 0
-  Porig = p_orig( yio = origES2,
-                  vio = origVar2,
-                  yr = repES2,
-                  vyr = repVar2,
+  Porig = p_orig( yio = origES3,
+                  vio = origVar3,
+                  yr = repES3,
+                  vyr = repVar3,
                   t2 = 0 )
   
-  # for sensitivity analyses:s
-  # prediction interval and Porig with tau = 0.13
-  # from Olssen-Collentine
-  # only use truly comparable SMDs for this
-  if ( !is.na(ES2type) & ES2type %in% c("Cohen's d", "Glass' delta") ){
-    #if ( ES2type %in% c("Cohen's d", "Glass' delta") ) {
-    Porig.sens = p_orig( yio = origES2,
-                         vio = origVar2,
-                         yr = repES2,
-                         vyr = repVar2,
-                         t2 = sqrt(.13) )
-    
-    # prediction interval
-    # as in Replicate::pred_int, but adding in t2 here:
-    yio = origES2
-    vio = origVar2
-    yir = repES2
-    vir = repVar2
-    pooled.SE = sqrt(vio + vir + .13)
-    PILo.sens = yio - qnorm(1 - .05/2) * pooled.SE
-    PIHi.sens = yio + qnorm(1 - .05/2) * pooled.SE
-    PIinside.sens = (yir > PILo.sens) & (yir < PIHi.sens)
-    
-    #}
-  } else {
-    Porig.sens = PILo.sens = PIHi.sens = PIinside.sens = NA
-  }
+  # for sensitivity analyses:
+  # prediction interval and Porig with tau = 0.13 (from Olssen-Collentine)
+  # makes sense only for ES3, not ES2, so that we're using SMDs
+  Porig.sens = p_orig( yio = origES3,
+                       vio = origVar3,
+                       yr = repES3,
+                       vyr = repVar3,
+                       t2 = sqrt(.13) )
+  
+  # prediction interval
+  # as in Replicate::pred_int, but adding in t2 here:
+  yio = origES3
+  vio = origVar3
+  yir = repES3
+  vir = repVar3
+  pooled.SE = sqrt(vio + vir + .13)
+  PILo.sens = yio - qnorm(0.975) * pooled.SE
+  PIHi.sens = yio + qnorm(0.975) * pooled.SE
+  PIinside.sens = (yir > PILo.sens) & (yir < PIHi.sens)
   
   
-  # P(replication p < 0.05) - Mathur & VanderWeele
-  PsigAgree1 = prob_signif_agree(yio = origES2,
-                                 vio = origVar2,
-                                 vir = repVar2,
+  # P(replication p < 0.05)
+  PsigAgree1 = prob_signif_agree(yio = origES3,
+                                 vio = origVar3,
+                                 vir = repVar3,
                                  t2 = 0,
                                  null = 0)
   
-  
+  # Courtney's counterfactual version
   # @@CALCULATING POWER IS GOING TO BE A PROBLEM UNLESS WE CAN DO IT FOR ONLY 2-GROUP DESIGNS
   #  AND MAYBE CORRELATIONS
   # # P(replication p < 0.05) in counterfactual world in which the true 
@@ -111,10 +103,10 @@ analyze_one_row = function(origES2,
   # # mu: the true effect
   # # we will solve for it
   # pwr_at_mu = function(mu){
-  #   pt( q = tcrit - mu / sqrt(origVar2),
+  #   pt( q = tcrit - mu / sqrt(origVar3),
   #       df = df,
   #       lower.tail = FALSE ) +
-  #     pt( q = -tcrit - mu / sqrt(origVar2),
+  #     pt( q = -tcrit - mu / sqrt(origVar3),
   #         df = df,
   #         lower.tail = TRUE )
   # }
@@ -126,25 +118,22 @@ analyze_one_row = function(origES2,
   # pwr_at_mu(15)
   # power.t.test( n = origN,
   #               delta = 15,
-  #               sd = sqrt(origVar2) * sqrt(origN) )$power
+  #               sd = sqrt(origVar3) * sqrt(origN) )$power
   # 
   # # solve for counterfactual mu
   # mu.cfactual = uniroot( function(.mu) eval( pwr_cfactual(.mu) ) = 0.80 )
   
   # FE meta-analysis of original and replications
-  #bm
-  FEmod = rma.uni( yi = c(origES2, repES2),
-                   vi = c(origVar2, repVar2),
+  FEmod = rma.uni( yi = c(origES3, repES3),
+                   vi = c(origVar3, repVar3),
                    method = "FE")
-  
-  #browser()
   
   # pw.ratioVar = NA
   # # use delta method to approximate variance of ratio
   # tryCatch({
   library(msm)
   pw.ratioVar = deltamethod( ~ x1/x2,
-                             mean = c( origES2, repES2 ), cov = diag( c(origVar2, repVar2) ) )^2
+                             mean = c( origES3, repES3 ), cov = diag( c(origVar3, repVar3) ) )^2
   # }, error = function(err){
   #   browser()
   # })
@@ -163,8 +152,11 @@ analyze_one_row = function(origES2,
                       pw.Porig = Porig, 
                       pw.PorigSens = Porig.sens,
                       
-                      pw.ratio = origES2 / repES2,
+                      pw.ratio = origES3 / repES3,
                       pw.ratioVar = pw.ratioVar,
+                      
+                      pw.diff = origES3 - repES3,
+                      pw.diffVar = origVar3 + repVar3,
                       
                       pw.PsigAgree1 = PsigAgree1,
                       
@@ -236,60 +228,58 @@ analyze_moderators = function( .dat,
   #  to handle few clusters and/or wrong working model
   library(clubSandwich)
   
-
-    
-    if ( !is.na(vi.name) ) {
-      ##### Set Up Working Correlation Matrix #####
-      # from Pustejovsky code "Analyze Tanner-Smith & Lipsey 2015 data.R"
-      # CHE: multilevel random effects model with constant sampling correlation working
-      # constant sampling correlation working model
-      V_mat = impute_covariance_matrix(vi = .dat$Vi,
-                                       cluster = .dat$pID,  #@@ may need to change this?
-                                       r = 0.6)
-      
-      ##### Fit Random-Effects Model #####
-      # fit random effects working model in metafor
-      # three-level model: https://stats.stackexchange.com/questions/116659/mixed-effects-meta-regression-with-nested-random-effects-in-metafor-vs-mixed-mod
-      # @@the random structure will be only two-level when doing exp-level 
-      model = rma.mv( eval( parse(text=formString) ),
-                      V = V_mat,
-                      #V = Vi,  # if Vi = 1 throughout, makes it similar to lmer
-                      random = ~ 1 | pID / eID,
-                      data = .dat,
-                      sparse = TRUE)
-      
-      t2 = sqrt(model$tau2)
-    }
-    
-    if ( is.na(vi.name) ) {
-      # above reports model-based (not robust) standard errors
-      
-      # sanity check: compare to lmer
-      #   model-based should match exactly IF variances all equal
-      library(lme4)
-      formString2 = paste( formString, " + (1 | pID / eID)" )
-      
-      model = lmer( eval( parse(text=formString2) ),
-                    data = .dat )
-      
-      t2 = NA
-      
-    }
   
-    # same regardless of rma.mv vs. lmer use:
-    # RVE standard errors
-    res = conf_int(model, vcov = "CR2")
+  
+  if ( !is.na(vi.name) ) {
+    ##### Set Up Working Correlation Matrix #####
+    # from Pustejovsky code "Analyze Tanner-Smith & Lipsey 2015 data.R"
+    # CHE: multilevel random effects model with constant sampling correlation working
+    # constant sampling correlation working model
+    V_mat = impute_covariance_matrix(vi = .dat$Vi,
+                                     cluster = .dat$pID,  #@@ may need to change this?
+                                     r = 0.6)
     
+    ##### Fit Random-Effects Model #####
+    # fit random effects working model in metafor
+    # three-level model: https://stats.stackexchange.com/questions/116659/mixed-effects-meta-regression-with-nested-random-effects-in-metafor-vs-mixed-mod
+    # @@the random structure will be only two-level when doing exp-level 
+    model = rma.mv( eval( parse(text=formString) ),
+                    V = V_mat,
+                    #V = Vi,  # if Vi = 1 throughout, makes it similar to lmer
+                    random = ~ 1 | pID / eID,
+                    data = .dat,
+                    sparse = TRUE)
     
-    # compare to model-based p-values
-    #cbind(pvals, model$pval)
+    t2 = sqrt(model$tau2)
+  }
+  
+  if ( is.na(vi.name) ) {
+    # above reports model-based (not robust) standard errors
     
-    # @@decide on t vs. z (keep consistent with conf_int above)
-    #pvals = 2 * pt( abs(res$beta) / res$SE, df = res$df, lower.tail = FALSE )
-    pvals = 2 * pnorm( abs(res$beta) / res$SE, lower.tail = FALSE )
+    # sanity check: compare to lmer
+    #   model-based should match exactly IF variances all equal
+    library(lme4)
+    formString2 = paste( formString, " + (1 | pID / eID)" )
     
-
-
+    model = lmer( eval( parse(text=formString2) ),
+                  data = .dat )
+    
+    t2 = NA
+    
+  }
+  
+  # same regardless of rma.mv vs. lmer use:
+  # RVE standard errors
+  res = conf_int(model, vcov = "CR2")
+  
+  
+  # compare to model-based p-values
+  #cbind(pvals, model$pval)
+  
+  # @@decide on t vs. z (keep consistent with conf_int above)
+  #pvals = 2 * pt( abs(res$beta) / res$SE, df = res$df, lower.tail = FALSE )
+  pvals = 2 * pnorm( abs(res$beta) / res$SE, lower.tail = FALSE )
+  
   
   ##### Put Results in Dataframe #####
   est.string = paste( round( res$beta, digits ),
@@ -328,8 +318,8 @@ analyze_moderators = function( .dat,
 
 # catches warnings and puts them in modTable as a column
 safe_analyze_moderators = function(...) {
-
-  r <- 
+  
+  r = 
     tryCatch(
       withCallingHandlers(
         {
@@ -355,44 +345,6 @@ safe_analyze_moderators = function(...) {
   modTable$Problems[ modTable$Analysis == rev(unique(modTable$Analysis))[1] ] = r$error_text
   return(modTable)
 }
-
-# 
-# laus <- function(...) {
-#   r <- 
-#     tryCatch(
-#       withCallingHandlers(
-#         {
-#           error_text <- "No error."
-#           list(value = analyze_moderators(...), error_text = error_text)
-#         }, 
-#         warning = function(e) {
-#           error_text <<- trimws(paste0("WARNING: ", e))
-#           invokeRestart("muffleWarning")
-#         }
-#       ), 
-#       error = function(e) {
-#         return(list(value = NA, error_text = trimws(paste0("ERROR: ", e))))
-#       }, 
-#       finally = {
-#       }
-#     )
-#   
-#   return(r)
-# }
-# 
-# laus(  .dat = dat,
-#        yi.name = i,
-#        # below assumes a standardized naming convention for
-#        #  variances of the pairwise metrics:
-#        vi.name = paste(i, "Var", sep=""),
-#        
-#        # cut out the "pw." part of outcome name
-#        analysis.label = strsplit(i, "[.]")[[1]][2],
-#        
-#        modVars = modVars,
-#        
-#        n.tests = length(modVars),
-#        digits = 2 )
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -467,7 +419,7 @@ convert_to_ES3 = function(x,
   x2[ind] = r_to_d( z_to_r( x[ind] ), 
                     sx = rep( 1, length( x[ind] ) ),  
                     delta = rep( 1, length( x[ind] ) ) )$d
-                    
+  
   
   return( data.frame(ES3 = x2) )
 }
