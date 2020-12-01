@@ -351,6 +351,17 @@ safe_analyze_moderators = function(...) {
 #                                   DATA-PREP HELPER                                #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
+
+################################ MISC ################################
+
+# ALSO PUT IN METAUTILITY
+# tests proposition x
+# but returns FALSE instead of NA if x itself is NA
+eqNA = function(x){
+  !is.na(x) & x == 1
+}
+#eqNA(NA == 5)
+
 ################################ EFFECT-SIZE CONVERSIONS ################################
 
 # convert to scale that's appropriate for meta-analysis (e.g., log-HR instead of HR),
@@ -403,29 +414,30 @@ convert_to_ES3 = function(x,
   x2 = rep(NA, length(x))
   
   # these are already SMDs, albeit with different interpretations
-  ind = !is.na(.ES2type) & .ES2type %in% c("Cohen's d", "Cohen's dz", "Glass' delta")
+  ind = !is.na(.ES2type) & .ES2type %in% c("Cohen's d",
+                                           "Cohen's dz",
+                                           "Glass' delta")
   # no conversion
   x2[ind] = x[ind]
   
-  # convert log-HRs
+  # convert log-HRss
   ind = !is.na(.ES2type) & .ES2type == "Log hazard ratio"
-  # @@THESE TWO FNS VERY MUCH NEED UNIT TESTS: 
   x2[ind] = logOR_to_SMD( logHR_to_logOR( x[ind] ) )$SMD
   
   # convert Fisher's z via Mathur & VanderWeele (2020)
-  # since SDs are unknown, define contrast of interest as 1 SD change in Xs
+  # since SDs are unknown, define contrast of interest as 1 SD change in X
+  # @@mention this in Supplement
   ind = !is.na(.ES2type) & .ES2type == "Fisher's z" 
-  #bm
+
   x2[ind] = r_to_d( z_to_r( x[ind] ), 
                     sx = rep( 1, length( x[ind] ) ),  
                     delta = rep( 1, length( x[ind] ) ) )$d
-  
   
   return( data.frame(ES3 = x2) )
 }
 
 
-# @@MM:update this  fn in MetaUtility because this is more general
+# @@MM:update this fn in MetaUtility because this is more general
 # Pearson's r to Fisher's z
 # NOT the Z-score
 # handles NAs
@@ -449,8 +461,6 @@ logHR_to_logOR = function(logHR,
                           rareY = rep(FALSE, length(logHR)),
                           lo = NA,
                           hi = NA){
-  
-  #browser()
   
   # # test only
   # logHR = c(NA, NA, log(1.03), log(2), log(2))
@@ -480,9 +490,6 @@ logHR_to_logOR = function(logHR,
     
     return(logRR)
   } )
-  #logHR_to_logRR_common( c(log(1.4), log(.745), NA) )
-  
-  
   
   logRR_to_logOR_common = Vectorize( function(logRR){
     
@@ -492,15 +499,12 @@ logHR_to_logOR = function(logHR,
     
     return(logOR)
   } )
-  #logRR_to_logOR_common( c(log(1.4), log(.745), NA) )
-  
-  
+
   # first convert logHR -> logRR via 
   #  TVW's Biometrics conversion (Thm 2)
   d[ eqNA(d$rareY == FALSE), c("logRR", "loLogRR", "hiLogRR") ] = logHR_to_logRR_common( d[ eqNA(d$rareY == FALSE), c("logHR", "lo", "hi") ] )
   
   # now convert the RRs to ORs via square-root
-  #     @bm: this is hitting an error
   d[ eqNA(d$rareY == FALSE), c("logOR", "loLogOR", "hiLogOR") ] = logRR_to_logOR_common( d[ eqNA(d$rareY == FALSE), c("logRR", "loLogRR", "hiLogRR") ] ) 
   
   ##### Get Variance from CI #####
@@ -557,9 +561,7 @@ logOR_to_SMD = function(logOR,
     
     return(SMD)
   } )
-  #logHR_to_logRR_common( c(log(1.4), log(.745), NA) )
-  
-  
+
   d[ c("SMD", "loSMD", "hiSMD") ] = .logOR_to_SMD( d[ c("logOR", "lo", "hi") ] )
   
   
@@ -588,18 +590,8 @@ logOR_to_SMD = function(logOR,
 # #  OR first from its CI limit
 # varLogOR = ( ( res$logOR[1] - res$lo[1] ) / qnorm(.975) )^2
 # expect_equal( res$varSMD[1], sqrt(3)/pi * varLogOR )
-# # @ WHY SO DIFFERENT?
+# # @ VERY DIFFERENT. THINK ABOUT. 
 
-
-
-
-# ALSO PUT IN METAUTILITY
-# tests proposition x
-# but returns FALSE instead of NA if x itself is NA
-eqNA = function(x){
-  !is.na(x) & x == 1
-}
-eqNA(NA == 5)
 
 
 # ALSO PUT IN METAUTILITY
@@ -626,10 +618,10 @@ ci_to_var = Vectorize( function(est, ci.lim, df = NA){
 # expect_equal( 1.05 + qt(.975, df = 10) * sqrt(res[1]), 1.15 )
 
 
-# test only
-est = 1.05
-ci.lim = 1.15
-df = 10
+# # test only
+# est = 1.05
+# ci.lim = 1.15
+# df = 10
 
 
 # x2 should be 0/1

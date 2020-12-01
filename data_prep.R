@@ -1,7 +1,7 @@
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                              PRELIMINARIES                                #
+#                                   PRELIMINARIES                                   #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 rm(list=ls())
@@ -318,13 +318,12 @@ d2$repVar2 = d2$repSE2^2
 
 ##### ES3: Convert all to approximate SMDs #####
 
-# @@update this
 toConvert = c("origES2", "origESLo2", "origESHi2", "repES2", "repESLo2", "repESHi2")
 
 library(stringr)
 # convert column-by-column
 for (i in toConvert) {
-  # name columns as "origES3", etc.
+  # name columns with "3", e.g., "origES3", etc.
   newName = str_replace(string = i,
                         pattern = "2",
                         replacement = "3")
@@ -341,13 +340,36 @@ d2$repSE3 = ( d2$repESHi3 - d2$repESLo3 ) / ( 2 * qnorm(.975) )
 d2$origVar3 = d2$origSE3^2
 d2$repVar3 = d2$repSE3^2
 
+##### Sanity checks #####
+# check each type
+table(d2$EStype)
+
+# check all SMDs
+ind = which( d2$EStype %in% c("Cohen's d",
+                              "Cohen's dz",
+                              "Glass' delta" )
+expect_equal( d2$origES3[ind], d2$origES[ind] )
+expect_equal( d2$repES3[ind], d2$repES[ind] )
+expect_equal( d2$origESLo3[ind], d2$origESLo[ind] )
+
+# check all HRs (common-outcome conversions)
+ind = which( d2$EStype == "Hazard ratio" )
+myRR = ( 1 - 0.5 * sqrt(d2$origES[ind]) ) / ( 1 - 0.5 * sqrt(1/d2$origES[ind]) )
+myOR = sqrt(myRR)
+mySMD = 0.91 * log(myOR)
+expect_equal( d2$origES3[ind], mySMD )
+# bm: fix this
+
+# check all Pearson's r
+
 # write intermediate data
 write_interm(d2, "intermediate_dataset_step3.csv")
 
 
 ################################ 4. POOL INTERNAL REPLICATIONS ################################ 
 
-# only doing this for ES3 with the expectation that we'll use that scale throughout analyses
+# only doing this for ES3
+# we can use just that scale throughout analyses
 
 # read back in
 d2 = read_interm("intermediate_dataset_step3.csv")

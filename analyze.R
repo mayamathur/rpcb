@@ -260,6 +260,11 @@ table(modTable$Problems)
 
 # @@think about ratio problem: maybe instead use difference, but controlling for original ES?
 
+setwd(results.dir)
+setwd("Tables to prettify")
+write.csv(modTable, "moderator_regressions.csv")
+
+
 
 ################################ TABLE: EXPT-LEVEL SUMMARIES OF PAIRWISE METRICS ################################ 
 
