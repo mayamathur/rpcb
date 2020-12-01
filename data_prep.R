@@ -257,7 +257,7 @@ CreateTableOne( dat = d2 %>% select(analysisVars) %>%
 write_interm(d2, "intermediate_dataset_step2.csv")
 
 
-################################ 3. CALCULATE SMDS ################################ 
+################################ 3. CALCULATE VARIOUS EFFECT SIZES (ES2 AND ES3) ################################ 
 
 # read back in
 d2 = read_interm("intermediate_dataset_step2.csv")
@@ -277,115 +277,8 @@ d2 %>% filter( quantPair == TRUE ) %>%
 t = d2 %>% group_by(EStype, Statistical.test.applied.to.original.data) %>%
   summarise(n())
 
-# @IMPORTANT: these are not necessarily Pearson's r! 
-#  some are Wilcoxon, so aren't comparable
-# for the Pearson's r ones, find out if exposure was binary
-#  or continuous
-t = d2 %>% filter( !is.na(EStype) & EStype == "r" ) %>%
-  select(pID,
-         eID, 
-         oID,
-         Statistical.test.applied.to.original.data,
-         Original.test.statistic.value,
-         What.statistical.test.was.reported.,
-         Original.test.statistic.type,
-         origES) 
-View2(t)
-# original statistical test (note how many are Wilcoxon or Spearman)
-t %>% group_by(Statistical.test.applied.to.original.data) %>%
-  summarise(n())
-# paper 12 is coded as EStype = r but has none of the other info
-# others are often t-tests, ANOVA, Wilcoxon tests, or Spearman
-# does that mean Spearman's were coded as r just like Pearson?
-
-# @save this to show Tim
-setwd(prepped.data.dir)
-setwd("Intermediate work")
-write.csv(t, "rows_with_correlations.csv")
-
-
-# these make sense
-SMDtypes = c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta")
-t = d2 %>% filter( !is.na(EStype) & EStype %in% SMDtypes ) %>%
-  select(EStype, 
-         pID,
-         eID, 
-         oID,
-         Statistical.test.applied.to.original.data,
-         What.statistical.test.was.reported.,
-         Original.test.statistic.type,
-         origES)
-View2(t)
-# original statistical test (note: @a lot of NAs here)
-t %>% group_by(Statistical.test.applied.to.original.data) %>%
-  summarise(n())
-
-# HRs
-t = d2 %>% filter( !is.na(EStype) & EStype %in% "Hazard ratio" ) %>%
-  select(pID,
-         eID, 
-         oID,
-         Statistical.test.applied.to.original.data,
-         What.statistical.test.was.reported.,
-         Original.test.statistic.type,
-         origES)
-# @paper 44: they fit a Cox regression but reported a t-test, but we have a HR?
-# Tim confirmed this was a mistake on the original authors' part
-# original statistical test (note: @a lot of NAs here)
-t %>% group_by(Statistical.test.applied.to.original.data) %>%
-  summarise(n())
-
-
-##### Which ones can eventually be converted to Cohen's d type measure? #####
-
-# Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
-
-table(d2$EStype)
-
-# @for Tim: ones for which we want means and SDs
-temp = c("between-subjects ANOVA", "Kruskal-Wallis rank sum test", "Wilcoxon signed-rank test", "Spearman's rank correlation")
-d2$peoID[ ( d2$EStype %in% c("Cliff's delta", "Cohen's w" ) | d2$Statistical.test.applied.to.original.data %in% temp ) ]
-
-
-# how many can be converted to Cohen's d type SMD? (of the completed pairs only)
-canConvert = c("Cohen's d", "Glass' delta", "Hazard ratio", "r")
-table(d2$EStype %in% canConvert & !is.na(d2$origES) & !is.na(d2$repES) )  # `102 of 337 can convert at this point 
-
-# @TEMP: prepare to remove rank-based correlations
-d2$canConvert = ( d2$EStype %in% c("Cohen's d", "Glass' delta", "Hazard ratio", "r") ) & 
-  ( !d2$Statistical.test.applied.to.original.data %in% c("Spearman's rank correlation", "Wilcoxon signed-rank test") ) & 
-  !is.na(d2$origES) & !is.na(d2$repES)
-# now only 84 can convert after removing rank correlations
-table(d2$canConvert)
-
-
-# Cohen's d and Glass' delta are comparable
-
-# HR can be converted to the above
-
-# r can be converted to the above IF it's Pearson r
-
-# Cliff's delta is rank-based measure of how often the values in one distribution are larger than
-#  the values in a second distribution, so is not comparable to the above
-# linear transformation of Mann-Whitney U-stat
-# SE of delta: https://www.real-statistics.com/non-parametric-tests/mann-whitney-test/cliffs-delta/
-View2(d2 %>% filter(EStype == "Cliff's delta"))
-
-# Cohen's dz is a within-subject measure that standardizes by the SD of the CHANGE scores
-#  and so is not comparable
-
-# Cohen's w is a chi-square measure that can be converted IF it was a 2-group design
-# https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0010059
-# see also https://stats.stackexchange.com/questions/256261/effect-size-and-standard-error-for-mann-whitney-u-statistic
-# @how did they get SEs for this?
-View2(d2 %>% filter(EStype == "Cohen's w"))
-# paper 9
-
-
 
 ##### ES2: Converted to a scale that can be meta-analyzed, but NOT necessarily SMDs #####
-
-# Most outcomes were already measured on a standardized mean difference scale (e.g., Cohen’s d, Cohen’s w, Glass’ delta). We approximately converted other effect size measures to standardized mean differences for all analyses (i.e., Pearson’s correlations with continuous independent variables per Mathur & VanderWeele, 2020b; hazard ratios per VanderWeele, 2019 and Hasselblad & Hedges, 1995; and Cohen’s w via XXX).
 
 # statistics that should be converted to ES2 scale
 toConvert = c("origES", "origESLo", "origESHi", "repES", "repESLo", "repESHi")
@@ -414,7 +307,7 @@ table(d2$ES2type)
 
 ##### Standard errors #####
 
-# @ASK TIM FOR THE ORIGINAL SES; THIS IS JUST A TEMPORARY Z APPROXIMATION:
+# @@COULD ASK TIM FOR THE ORIGINAL SES IF AVAILABLE; THIS IS A TEMPORARY Z APPROXIMATION:
 # 1.96 * SE * 2 = full CI width
 d2$origSE2 = ( d2$origESHi2 - d2$origESLo2 ) / ( 2 * qnorm(.975) )
 d2$repSE2 = ( d2$repESHi2 - d2$repESLo2 ) / ( 2 * qnorm(.975) )
@@ -423,31 +316,38 @@ d2$origVar2 = d2$origSE2^2
 d2$repVar2 = d2$repSE2^2
 
 
-##### ES3: SMDs where possible; otherwise NA #####
+##### ES3: Convert all to approximate SMDs #####
 
-# do me later
+# @@update this
+toConvert = c("origES2", "origESLo2", "origESHi2", "repES2", "repESLo2", "repESHi2")
 
-# convert 
-
-
-
+library(stringr)
 # convert column-by-column
 for (i in toConvert) {
-  newName = paste(i, "2", sep="")
+  # name columns as "origES3", etc.
+  newName = str_replace(string = i,
+                        pattern = "2",
+                        replacement = "3")
   
-  temp = convert_to_ES2( d2[[i]], .EStype = d2$EStype )
+  temp = convert_to_ES3( d2[[i]], .ES2type = d2$ES2type )
   
-  d2[[newName]] = temp$ES2
-  
-  # this will be the same for each i, so just do it once
-  if (i == toConvert[1]) d2$ES2type = temp$ES2type
+  d2[[newName]] = temp$ES3
 }
+
+##### Standard errors #####
+d2$origSE3 = ( d2$origESHi3 - d2$origESLo3 ) / ( 2 * qnorm(.975) )
+d2$repSE3 = ( d2$repESHi3 - d2$repESLo3 ) / ( 2 * qnorm(.975) )
+
+d2$origVar3 = d2$origSE3^2
+d2$repVar3 = d2$repSE3^2
 
 # write intermediate data
 write_interm(d2, "intermediate_dataset_step3.csv")
 
 
 ################################ 4. POOL INTERNAL REPLICATIONS ################################ 
+
+# only doing this for ES3 with the expectation that we'll use that scale throughout analyses
 
 # read back in
 d2 = read_interm("intermediate_dataset_step3.csv")
@@ -456,7 +356,7 @@ d2 = read_interm("intermediate_dataset_step3.csv")
 # number of internal replications per paper-exp-outcome replication
 # used below in sanity checks
 t = d2 %>%
-  filter(!is.na(repES2) & !is.na(origES2)) %>%
+  filter(!is.na(repES3) & !is.na(origES3)) %>%
   group_by(peoID) %>%
   summarise(n = n())
 table(t$n)
@@ -465,19 +365,19 @@ table(t$n)
 # kept separate from d2 for now to facilitate sanity checks
 # temp has same dimensions as d2
 temp = d2 %>% group_by(pID, eID, oID) %>%
-  mutate( FE = sum(repES2 * 1/repVar2) / sum(1/repVar2),
-          FEvar = 1 / sum(1/repVar2) )
+  mutate( FE = sum(repES3 * 1/repVar3) / sum(1/repVar3),
+          FEvar = 1 / sum(1/repVar3) )
 
 expect_equal( nrow(temp), nrow(d2) )
 
-# # how come this doesn't work??
+# # doesn't work; not sure immediately why
 # x = d2 %>% group_by(pID, eID, oID) %>%
-#   mutate( FE = as.numeric( rma.uni(yi = repES2, vi = repVar2, method = "FE")$b ) )
+#   mutate( FE = as.numeric( rma.uni(yi = repES3, vi = repVar3, method = "FE")$b ) )
 
 # # but this works?
 # # works
 # x = d2 %>% group_by(pID, eID, oID) %>%
-#   mutate( FE = mean(repES2) )
+#   mutate( FE = mean(repES3) )
 
 ##### Sanity checks #####
 
@@ -485,34 +385,34 @@ if ( run.sanity == TRUE ) {
   # manually reproduce for ones with 1 replication
   id = t$peoID[t$n == 1]
   # FE estimate should just be the single estimate
-  expect_equal(temp$FE[d2$peoID %in% id], d2$repES2[d2$peoID %in% id])
-  expect_equal(temp$FEvar[d2$peoID %in% id], d2$repVar2[d2$peoID %in% id])
+  expect_equal(temp$FE[d2$peoID %in% id], d2$repES3[d2$peoID %in% id])
+  expect_equal(temp$FEvar[d2$peoID %in% id], d2$repVar3[d2$peoID %in% id])
   
   # check one with 2 internal replications
   id = t$peoID[t$n == 2][1]
   # point estimate
   expect_equal( unique(temp$FE[d2$peoID %in% id]),
-                as.numeric( rma.uni( yi = d2$repES2[d2$peoID == id],
-                                     vi = d2$repVar2[d2$peoID == id],
+                as.numeric( rma.uni( yi = d2$repES3[d2$peoID == id],
+                                     vi = d2$repVar3[d2$peoID == id],
                                      method = "FE")$b ) )
   # variance
   expect_equal( unique(temp$FEvar[d2$peoID %in% id]),
-                as.numeric( rma.uni( yi = d2$repES2[d2$peoID == id],
-                                     vi = d2$repVar2[d2$peoID == id],
+                as.numeric( rma.uni( yi = d2$repES3[d2$peoID == id],
+                                     vi = d2$repVar3[d2$peoID == id],
                                      method = "FE")$se^2 ) )
   
   # check that FE estimate is always equal to replication estimate
   #  when nInternal = 1, and otherwise is not
-  temp$agrees = abs(temp$FE - temp$repES2) < 0.001
+  temp$agrees = abs(temp$FE - temp$repES3) < 0.001
   table(temp$agrees, temp$nInternal, useNA = "ifany")
 }
 
 
 
 ###### Overwrite the d2 variables with pooled ones #####
-d2$repES2 = temp$FE
-d2$repVar2 = temp$FEvar
-d2$repSE2 = sqrt(temp$FEvar)
+d2$repES3 = temp$FE
+d2$repVar3 = temp$FEvar
+d2$repSE3 = sqrt(temp$FEvar)
 
 # keep only 1 row per outcome (collapse over internal replications)
 d3 = d2[ !duplicated(d2$peoID), ]

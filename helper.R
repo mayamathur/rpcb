@@ -413,19 +413,20 @@ convert_to_ES2 = function(x,
   x2 = type = rep(NA, length(x))
   
   # these stay the same
-  ind = !is.na(.EStype) & .EStype %in% c("Cliff's delta", "Cohen's d", "Cohen's dz", "Glass' delta")
+  ind = !is.na(.EStype) & .EStype %in% c("Cliff's delta",
+                                         "Cohen's d",
+                                         "Cohen's dz",
+                                         "Glass' delta")
   x2[ind] = x[ind]
   type[ind] = .EStype[ind]
-  
-  # @need to handle Cohen's w
   
   # HR -> log-HR
   ind = !is.na(.EStype) & .EStype == "Hazard ratio"
   x2[ind] = log(x[ind])
   type[ind] = "Log hazard ratio"
   
-  # @ASSUMES R IS PEARSON CORRELATION; NEED TO CHECK IF TRUE:
-  ind = !is.na(.EStype) & .EStype == "r" 
+  # Pearson's r -> Fisher's z
+  ind = !is.na(.EStype) & .EStype == "Pearson's r" 
   x2[ind] = r_to_z_NA(x[ind] )
   type[ind] = "Fisher's z"
   
@@ -442,34 +443,37 @@ convert_to_ES2 = function(x,
 convert_to_ES3 = function(x,
                           .ES2type){  
   
-  # test only
-  x = d2$ES2
-  .ES2type = d2$ES2type
+  # # # test only
+  # x = d2$repES2
+  # .ES2type = d2$ES2type
   
-  x2 = type = rep(NA, length(x))
+  # initialize new vector of SMDs
+  x2 = rep(NA, length(x))
   
-  # these are already SMDs
-  # @though note that we're allowing Cohen's dz here
-  ind = !is.na(.EStype) & .EStype %in% c("Cohen's d", "Cohen's dz", "Glass' delta")
+  # these are already SMDs, albeit with different interpretations
+  ind = !is.na(.ES2type) & .ES2type %in% c("Cohen's d", "Cohen's dz", "Glass' delta")
+  # no conversion
   x2[ind] = x[ind]
-  type[ind] = "SMD"
   
   # convert log-HRs
-  ind = !is.na(.EStype) & .EStype == "Log hazard ratio"
-  x2[ind] = 
-    type[ind] = "Log hazard ratio"
+  ind = !is.na(.ES2type) & .ES2type == "Log hazard ratio"
+  # @@THESE TWO FNS VERY MUCH NEED UNIT TESTS: 
+  x2[ind] = logOR_to_SMD( logHR_to_logOR( x[ind] ) )$SMD
   
-  # @ASSUMES R IS PEARSON CORRELATION; NEED TO CHECK IF TRUE:
-  ind = !is.na(.EStype) & .EStype == "r" 
-  x2[ind] = r_to_z_NA(x[ind] )
-  type[ind] = "Fisher's z"
+  # convert Fisher's z via Mathur & VanderWeele (2020)
+  # since SDs are unknown, define contrast of interest as 1 SD change in Xs
+  ind = !is.na(.ES2type) & .ES2type == "Fisher's z" 
+  #bm
+  x2[ind] = r_to_d( z_to_r( x[ind] ), 
+                    sx = rep( 1, length( x[ind] ) ),  
+                    delta = rep( 1, length( x[ind] ) ) )$d
+                    
   
-  return( data.frame(ES2 = x2,
-                     ES2type = type) )
+  return( data.frame(ES3 = x2) )
 }
 
 
-# UPDATE THIS IN METAUTILITY
+# @@MM:update this  fn in MetaUtility because this is more general
 # Pearson's r to Fisher's z
 # NOT the Z-score
 # handles NAs
@@ -482,7 +486,7 @@ r_to_z_NA = function(r){
 
 
 
-# ALSO PUT IN METAUTILITY
+# @@MM: also put this in MetaUtility
 # logHR to logOR by way of logRR
 # if rare, it's easy because HR \approx RR
 # if common, use TVW's two conversions
@@ -490,9 +494,11 @@ r_to_z_NA = function(r){
 # goal of the fn is to fill in logOR and varLogRR for all entries
 #  the other cols that get added in the interim are just intermediate steps
 logHR_to_logOR = function(logHR,
-                          rareY = rep(FALSE, length(logOR)),
+                          rareY = rep(FALSE, length(logHR)),
                           lo = NA,
                           hi = NA){
+  
+  #browser()
   
   # # test only
   # logHR = c(NA, NA, log(1.03), log(2), log(2))
