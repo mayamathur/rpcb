@@ -317,7 +317,7 @@ d2$repVar2 = d2$repSE2^2
 
 
 ##### ES3: Convert all to approximate SMDs #####
-
+# convert point estimates and CI limits
 toConvert = c("origES2", "origESLo2", "origESHi2", "repES2", "repESLo2", "repESHi2")
 
 library(stringr)
@@ -333,36 +333,105 @@ for (i in toConvert) {
   d2[[newName]] = temp$ES3
 }
 
-##### Standard errors #####
-d2$origSE3 = ( d2$origESHi3 - d2$origESLo3 ) / ( 2 * qnorm(.975) )
-d2$repSE3 = ( d2$repESHi3 - d2$repESLo3 ) / ( 2 * qnorm(.975) )
 
-d2$origVar3 = d2$origSE3^2
-d2$repVar3 = d2$repSE3^2
 
-##### Sanity checks #####
+##### Sanity checks on point estimates and CI limits #####
 # check each type
 table(d2$EStype)
 
 # check all SMDs
+# they should have stayed the same upon conversion to ES3
 ind = which( d2$EStype %in% c("Cohen's d",
                               "Cohen's dz",
-                              "Glass' delta" )
+                              "Glass' delta" ) )
 expect_equal( d2$origES3[ind], d2$origES[ind] )
 expect_equal( d2$repES3[ind], d2$repES[ind] )
 expect_equal( d2$origESLo3[ind], d2$origESLo[ind] )
 
 # check all HRs (common-outcome conversions)
 ind = which( d2$EStype == "Hazard ratio" )
-myRR = ( 1 - 0.5 * sqrt(d2$origES[ind]) ) / ( 1 - 0.5 * sqrt(1/d2$origES[ind]) )
+myRR = ( 1 - 0.5^sqrt(d2$origES[ind]) ) / ( 1 - 0.5^sqrt(1/d2$origES[ind]) )
 myOR = sqrt(myRR)
-mySMD = 0.91 * log(myOR)
+mySMD = log(myOR) * sqrt(3) / pi
 expect_equal( d2$origES3[ind], mySMD )
-# bm: fix this
+# CI limit
+myRRLo = ( 1 - 0.5^sqrt(d2$origESLo[ind]) ) / ( 1 - 0.5^sqrt(1/d2$origESLo[ind]) )
+myORLo = sqrt(myRRLo)
+mySMDLo = log(myORLo) * sqrt(3) / pi
+expect_equal( d2$origESLo3[ind], mySMDLo )
 
 # check all Pearson's r
+ind = which( d2$EStype == "Pearson's r" )
+mySMD = r_to_d(r = d2$origES[ind],
+               sx = 1,
+               delta = 1)$d
+expect_equal( d2$origES3[ind], mySMD )
+# CI limits
+mySMDLo = r_to_d(r = d2$origESLo[ind],
+                 sx = 1,
+                 delta = 1)$d
+expect_equal( d2$origESLo3[ind], mySMDLo )
 
-# write intermediate data
+##### Calculate standard errors #####
+# @@important: we got these by transforming CI limits,
+#  then using z approximation to back out the variance
+#  when origES had a highly asymmetric CI, so will origES3
+#   because we just transformed the CI limits
+#  so the approach below approximates the SMD's variance by 
+#  using the full CI width
+# we did this instead of using delta method on variance because we
+#  didn't have original variances
+d2$origSE3 = ( d2$origESHi3 - d2$origESLo3 ) / ( 2 * qnorm(.975) )
+d2$repSE3 = ( d2$repESHi3 - d2$repESLo3 ) / ( 2 * qnorm(.975) )
+
+d2$origVar3 = d2$origSE3^2
+d2$repVar3 = d2$repSE3^2
+
+
+
+##### Sanity checks on SEs #####
+# will be close but not necessarily exactly equal in the case of highly asymmetric CIs
+d2$discrep = abs((d2$origES3 + qnorm(.975) * d2$origSE3) - d2$origESHi3)
+summary(d2$discrep)
+
+ind = which( (d2$origES3 + qnorm(.975) * d2$origSE3) - d2$origESHi3 > 1.38 )
+d2$origES3[ind]; d2$origESLo3[ind]; d2$origESHi3[ind]
+# bm
+# huh??
+d2$origES[ind]; d2$origESLo[ind]; d2$origESHi[ind]
+d2$EStype[ind]
+d2$peoID[ind]
+
+# check original dataset
+temp = d %>% filter( `Paper #` == 28 & `Experiment #` == 2 & `Effect #` == 1 )
+temp$`Original effect size`
+temp$`Original lower CI`
+temp$`Original upper CI`
+# this was an issue even in the original dataset
+
+d2$badCI = ( d2$origES > d2$origESHi ) |  ( d2$origES < d2$origESLo )
+table( d2$badCI )
+# just this one
+# Paper 28, experiment 2, effect 1
+# @ask Tim
+
+# look at the initial and fully converted estimates and CI limits
+temp = d2 %>% select( peoID, EStype, origES, origESLo, origESHi, origES3, origESLo3, origESHi3, discrep ) %>%
+  mutate(loArm = origES3 - origESLo3, hiArm = origESHi3 - origES3 ) %>%
+  arrange( desc(EStype, discrep) )
+
+temp = temp %>% mutate_at( names(temp)[ !names(temp) %in% c("peoID", "EStype")],
+                    function(x) round(x,2) )
+
+# and for replications
+temp = d2 %>% select( peoID, EStype, repES, repESLo, repESHi, repES3, repESLo3, repESHi3, discrep ) %>%
+  mutate(loArm = repES3 - repESLo3, hiArm = repESHi3 - repES3 ) %>%
+  arrange( desc(EStype, discrep) )
+
+temp = temp %>% mutate_at( names(temp)[ !names(temp) %in% c("peoID", "EStype")],
+                           function(x) round(x,2) )
+
+##### Write Intermediate Dataset #####
 write_interm(d2, "intermediate_dataset_step3.csv")
 
 
