@@ -1,4 +1,9 @@
 
+# Important notes:
+#   - Direction transformation of CI limits means intermediate CI limits for ES2 and ES3
+#    may not be ideal (i.e., asymmetric), but that's because they're only an intermediate
+#    step toward approximating the final SE
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                   PRELIMINARIES                                   #
@@ -372,6 +377,7 @@ mySMDLo = r_to_d(r = d2$origESLo[ind],
                  delta = 1)$d
 expect_equal( d2$origESLo3[ind], mySMDLo )
 
+
 ##### Calculate standard errors #####
 # @@important: we got these by transforming CI limits,
 #  then using z approximation to back out the variance
@@ -390,6 +396,21 @@ d2$repVar3 = d2$repSE3^2
 
 
 ##### Sanity checks on SEs #####
+
+# compare to delta-method SEs for one EStype (Pearson's R)
+ind = which( d2$EStype == "Pearson's r" )
+# CI limits
+mySMD = r_to_d(r = d2$origES[ind],
+                 sx = 1,
+                 delta = 1,
+                 N = d2$origN[ind] )
+# SEs are pretty similar
+cbind( sqrt(d2$origVar3[ind]), mySMD$se )
+# the CIs themselves are different because of aforementioned asymmetry, which makes sense
+cbind( d2$origESLo3[ind], mySMD$lo )
+
+
+
 # will be close but not necessarily exactly equal in the case of highly asymmetric CIs
 d2$discrep = abs((d2$origES3 + qnorm(.975) * d2$origSE3) - d2$origESHi3)
 summary(d2$discrep)
