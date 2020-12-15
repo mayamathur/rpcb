@@ -233,8 +233,7 @@ analyze_moderators = function( .dat,
   if ( !is.na(vi.name) ) {
     ##### Set Up Working Correlation Matrix #####
     # from Pustejovsky code "Analyze Tanner-Smith & Lipsey 2015 data.R"
-    # CHE: multilevel random effects model with constant sampling correlation working
-    # constant sampling correlation working model
+    # CHE: multilevel random effects model with constant sampling correlation working model
     V_mat = impute_covariance_matrix(vi = .dat$Vi,
                                      cluster = .dat$pID,  #@@ may need to change this?
                                      r = 0.6)
@@ -642,6 +641,39 @@ cohen_d = function( x2, y ) {
 
 
 
+
+
+################################ FNS FOR AGGREGATING PAIRWISE METRICS WITH STRING OUTPUT ################################
+
+# aggregation fns: 
+# plain mean (ratio)
+# count and percent (repinside, PsigAGree)
+# FE analysis (origES2, repES2, FEest)
+# harmonic mean p-value (porig)
+n_perc_string = function(x, digits = 0) {
+  if ( all( is.na(x) ) ) return("All missing")
+  x = x[!is.na(x)]
+  paste( sum(x), " (", round( 100 * mean(x), digits ), "%)", sep = "" )
+}
+n_perc_string( c(0,0,0,0,1,1,1,0,0) )
+
+harmonic_p = function(x) {
+  library(harmonicmeanp)
+  if ( all( is.na(x) ) ) return(NA)
+  # @@note: better use p.hmp here becuase it's asymptotically exact,
+  #  but it was giving error messages
+  hmp.stat( x[ !is.na(x) ] ) 
+}
+
+#bm: instead of doing strings, should use numbers throughout and then post-process
+#  that way we can use these in the plots
+RE_string = function(yi, vi, digits = 2) {
+  mod = rma.uni(yi = yi,
+                vi = vi,
+                method = "REML")
+  
+  paste( round( mod$b, digits ), 
+}
 
 
 ################################ MISCELLANEOUS FORMATTING AND CONVENIENCE FNS ################################
