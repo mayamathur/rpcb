@@ -346,26 +346,15 @@ fwrite(de, "exp_level_pairwise_summary_numerical.csv")
 
 #################################### RPP-STYLE SCATTERPLOT ###################################
 
-# bm
-
-
-
-# -	eLife: no table/figure limit; figure supplements
-# -	Difference waterfall plot: convert all to SMD and show inference; will need to cut out some of the very extreme ones to avoid logging y-axis
-# -	Dumbbell: order by original size; dot size proportional to original; flip orientation to match waterfall; could use color-coding for categories of Porig (0.05, 0.10, etc.)
-# -	Always descending order (falling instead of rising) for everything
-# -	Color differences: animal vs. non-animal
-# -	Separate figure for representative images (just the replication estimates; color-coded); Tim needs to get SMDs for us to do this)
-
-
-
 dat = read_interm("intermediate_analysis_dataset_step2.csv")
 
 
 library(ggalt)
 library(tidyverse)
 
-dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) )
+# exclude 2 really extreme originals because they mess up plot scaling
+dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) %>%
+                   filter(origES3 < 50) )
 
 # # randomly sample for testing purposes
 # set.seed(2)
@@ -378,14 +367,11 @@ dp$expType.pretty = NA
 dp$expType.pretty[ dp$expAnimal == TRUE ] = "Animal"
 dp$expType.pretty[ dp$expAnimal == FALSE ] = "Not animal"
 
-##### Lower Panel: RPP-style scatterplots ######
 
 min( c(dp$origES3, dp$repES3), na.rm = TRUE )
 xmin = -4
 max( c(dp$origES3, dp$repES3), na.rm = TRUE ) 
 xmax = 30
-# @two points aren't shown because they had insane origES3 (e.g., 85)
-sum( dp$origES3 > xmax )
 
 colors = c("red", "black")
 
@@ -418,54 +404,98 @@ p = ggplot( data = dp,
          panel.grid.minor=element_blank() ) +
   
   scale_color_manual( values = colors ) +
-  scale_x_continuous( limits = c(xmin, xmax) ) +
-  scale_y_continuous( limits = c(xmin, xmax) ) +
+  scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+  scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
   
   labs( color = "Experiment type" ) +
   xlab("Original study estimate (SMD)") +
   ylab("Replication study estimate (SMD)")
 
 
+# save it
+setwd(results.dir)
+ggsave("plot_scatter.pdf",
+       width = 5,
+       height = 6.5)
 
-##### Upper Panel: Ordered differences ######
 
-dp = dp %>% filter( !is.na(ESgroup) ) %>%
-  arrange(desc(repES2 / origES2))
+
+#################################### WATERFALL PLOT OF DIFFERENCES ###################################
+
+dp = dp %>%
+  arrange( desc(pw.diff) )
 
 dp$ind = 1:nrow(dp)
 
 
-# only use CI if variance of ratio is less than 10
-
-p = ggplot() +
+# again excludes the 2 really extreme originals
+p = ggplot( ) +
   
   # null
-  geom_hline(yintercept = 100,
+  geom_hline(yintercept = 0,
              lty = 2,
              color = "gray") +
-  
-  
+
+  # color-coded by experiment type
   geom_point( data = dp,
               aes(x = ind,
-                  y = 100*(repES2 / origES2),
-                  color = ESgroup) ) +
+                  y = pw.diff,
+                  color = expType.pretty) ) +
   
-  # geom_errorbar( data = dp,
-  #                aes(ymin = pw.ratio - qnorm(.975) * pw.ratioVar,
-  #                    ymax = pw.ratio + qnorm(.975) * pw.ratioVar,
-  #                    color = ESgroup) ) +
+  geom_errorbar( data = dp,
+                 aes(x = ind,
+                     ymin = pw.diff - qnorm(.975) * sqrt(pw.diffVar),
+                     ymax = pw.diff + qnorm(.975) * sqrt(pw.diffVar),
+                     color = expType.pretty),
+                 alpha = 0.4) +
   
-  scale_y_log10() +
   
   # basic prettifying
   theme_bw() +
   theme( panel.grid.major=element_blank(),
          panel.grid.minor=element_blank() ) +
   
-  ylab("Replication percent of original (logged axis)")
+  scale_color_manual( values = colors ) +
+  #scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+  #scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+  
+  labs( color = "Experiment type" ) +
+  xlab("Pair") +
+  ylab("Replication - original estimate (SMD)")
+
+
+# save it
+setwd(results.dir)
+ggsave("plot_waterfall_diffs.pdf",
+       width = 5,
+       height = 10)
 
 
 
+#bm - good job! 
+
+
+
+# -	eLife: no table/figure limit; figure supplements
+
+
+# -	Dumbbell: order by original size; dot size proportional to original; flip orientation to match waterfall; could use color-coding for categories of Porig (0.05, 0.10, etc.)
+
+
+# -	Separate figure for representative images (just the replication estimates; color-coded); Tim needs to get SMDs for us to do this)
+
+
+
+
+
+
+
+
+
+
+
+
+# OLD (BUT DEFINITELY NEED CODE, LIKE FOR WATERFALL):
 ##### Upper Panel: Ordered ratios ######
 
 dp = dp %>% filter( !is.na(ESgroup) ) %>%
