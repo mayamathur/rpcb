@@ -349,7 +349,7 @@ fwrite(de, "exp_level_pairwise_summary_numerical.csv")
 # bm
 
 
-# -	RPP scatterplots: keep lines at 45 degrees throughout
+
 # -	eLife: no table/figure limit; figure supplements
 # -	Difference waterfall plot: convert all to SMD and show inference; will need to cut out some of the very extreme ones to avoid logging y-axis
 # -	Dumbbell: order by original size; dot size proportional to original; flip orientation to match waterfall; could use color-coding for categories of Porig (0.05, 0.10, etc.)
@@ -365,13 +365,6 @@ dat = read_interm("intermediate_analysis_dataset_step2.csv")
 library(ggalt)
 library(tidyverse)
 
-# # group certain ES together in plot
-# dat$ESgroup = NA
-# dat$ESgroup[ dat$ES2type %in% c("Cohen's d", "Glass' delta", "Cohen's dz") ] = "SMD"
-# dat$ESgroup[ dat$ES2type == "Log hazard ratio" ] = "Log hazard ratio"
-# dat$ESgroup[ dat$ES2type == "Fisher's z" ] = "Fisher's z"
-# table(dat$ES2type, dat$ESgroup)
-
 dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) )
 
 # # randomly sample for testing purposes
@@ -380,16 +373,26 @@ dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) )
 # #dp = dat[1:10,]
 dp$plotID = dp$peoID # with eye toward functionizing
 
-
+#@move this
+dp$expType.pretty = NA
+dp$expType.pretty[ dp$expAnimal == TRUE ] = "Animal"
+dp$expType.pretty[ dp$expAnimal == FALSE ] = "Not animal"
 
 ##### Lower Panel: RPP-style scatterplots ######
-p = ggplot() + 
-  
-  facet_grid(. ~ ESgroup,
-             scales = "free",
-             space = "fixed"
-             #space = "free_y"
-  ) +
+
+min( c(dp$origES3, dp$repES3), na.rm = TRUE )
+xmin = -4
+max( c(dp$origES3, dp$repES3), na.rm = TRUE ) 
+xmax = 30
+# @two points aren't shown because they had insane origES3 (e.g., 85)
+sum( dp$origES3 > xmax )
+
+colors = c("red", "black")
+
+p = ggplot( data = dp,
+            aes(x = origES3,
+                y = repES3,
+                color = expType.pretty ) ) + 
   
   # null
   geom_abline(intercept = 0,
@@ -397,18 +400,30 @@ p = ggplot() +
               lty = 2,
               color = "gray") +
   
+  geom_hline( yintercept = 0,
+              lty = 1,
+              color = "gray" ) +
   
-  geom_point( data = dp,
-              aes(x = origES2,
-                  y = repES2)) +
+  geom_vline( xintercept = 0,
+              lty = 1,
+              color = "gray" ) +
+  
+  geom_point( size = 2.4,
+              pch = 1,
+              alpha = 1) +
   
   # basic prettifying
   theme_bw() +
   theme( panel.grid.major=element_blank(),
          panel.grid.minor=element_blank() ) +
   
-  xlab("Original study estimate") +
-  ylab("Replication study estimate")
+  scale_color_manual( values = colors ) +
+  scale_x_continuous( limits = c(xmin, xmax) ) +
+  scale_y_continuous( limits = c(xmin, xmax) ) +
+  
+  labs( color = "Experiment type" ) +
+  xlab("Original study estimate (SMD)") +
+  ylab("Replication study estimate (SMD)")
 
 
 
