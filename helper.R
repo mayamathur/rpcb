@@ -655,7 +655,8 @@ n_perc_string = function(x, digits = 0) {
   x = x[!is.na(x)]
   paste( sum(x), " (", round( 100 * mean(x), digits ), "%)", sep = "" )
 }
-n_perc_string( c(0,0,0,0,1,1,1,0,0) )
+# n_perc_string( c(0,0,0,0,1,1,1,0,0) )
+
 
 harmonic_p = function(x) {
   library(harmonicmeanp)
@@ -672,11 +673,27 @@ RE_string = function(yi, vi, digits = 2) {
                 vi = vi,
                 method = "REML")
   
-  paste( round( mod$b, digits ), 
+  paste( round( mod$b, digits ), " [", round( mod$ci.lb, digits ), ", ", round( mod$ci.ub, digits ) )
 }
 
 
 ################################ MISCELLANEOUS FORMATTING AND CONVENIENCE FNS ################################
+
+
+# stands for "wipe results"
+wr = function(){
+  setwd(results.dir)
+  if( "stats_for_paper.csv" %in% list.files() ) system("rm stats_for_paper.csv")
+  # setwd(overleaf.dir)
+  # if( "stats_for_paper.csv" %in% list.files() ) system("rm stats_for_paper.csv")
+}
+
+# stands for "view results"
+vr = function(){
+  setwd(results.dir)
+  View( read.csv("stats_for_paper.csv") )
+}
+
 
 # read/write intermediate work
 write_interm = function(x, filename){

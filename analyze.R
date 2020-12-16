@@ -1,7 +1,11 @@
 
+# High-level summary of this script:
+#  - Calculates pairwise metrics at the outcome level
+#  - Then aggregates these at the experiment level to create an experiment-level datasets
+#  - Conducts remaining analyses at both levels of analysis (outcome, experiment)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                              PRELIMINARIES                                #
+#                                     PRELIMINARIES                                 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 rm(list=ls())
@@ -16,6 +20,8 @@ library(Replicate)
 library(data.table)
 library(metafor)
 library(here)
+library(ggalt)
+library(tidyverse)
 
 # @@fix relative path problem:
 #set_here("~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology")
@@ -29,86 +35,30 @@ results.dir = paste(root.dir, "Results from R", sep="/")
 # no sci notation
 options(scipen=999)
 
+# for plots
+colors = c("red", "black")
+
 setwd(code.dir)
 source("helper.R")
 
 
 setwd(prepped.data.dir)
-d = fread("prepped_outcome_level_data.csv")
+do = fread("prepped_outcome_level_data.csv")
 
 # read in codebook for easy searching
 setwd(raw.data.dir)
 cd = fread("codebook_merged.csv")
 
-# d = read_xlsx("RP_CB Final Analysis .xlsx")
-# 
-# names(d)
-# 
-# 
-# dim(d)  # 258
-# 
-# table(d$`Replication attempted`)  # 233
-# table(d$`Experiment completed`) # 190
-# 
-# d %>% filter( `Experiment completed` == "Yes" ) %>%
-#   summarise( length(unique(`Original study title`)),
-#              mean(`Number of lab(s) contracted for the entire study`) )
-# 
-# data.frame( d %>% group_by(`Original study title`) %>%
-#               summarise( n(),
-#                          comp = mean(`Experiment completed` == "Yes"),
-#                          expN0 = max(`Experiment #`, na.rm = TRUE),
-#                          max(`Study #`, na.rm = TRUE) ) )
-
-
-# with eye toward functionizing everything later (so we can do for outcome- and exp-level):
-dat = d
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                     METRICS FOR ALL PAIRS (INCL NON-COMPLETED)                                #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
-# Percent sign agreement: The percentage of replications whose estimates agree in direction with the original study. This could be heuristically compared to the 50% that would be expected by chance if the null holds exactly in every replication (i.e., no effect heterogeneity) and conditional on all originals’ being positive in sign.
-
-table(dat$origDirection, dat$repDirection, useNA = "ifany")
-
-mean( dat$repDirection == "Positive" )
-sum( dat$repDirection == "Positive" )
-
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#              2. MAIN PAIRWISE METRICS (COMPLETED QUANT PAIRS)                        #
+#               WORK ON OUTCOME-LEVEL DATA: CALCULATE PAIRWISE METRICS              #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 ################################ CALCULATE PAIRWISE METRICS ################################ 
 
-# Primary: Prediction interval and whether replication falls inside it (assuming t2=0)
-# Make forest plot of these, including Porig on the side
-
-# Primary: Porig
-
-# Primary: Ratio of original to replication study estimates
-
-# Secondary: P(Replication p < .05) with 2 expectation benchmarks
-#  - from JRSSA paper
-#  - the true effect size in each original is equal to the effect size for which it would
-#   have had 80% power.
-
-# Porig with assumed zero heterogeneity
-
-# Fixed-effects pooled estimate: A meta-analytic pooled estimate of the original and replication estimates from each pair. 
-
-# As sensitivity analysis:
-# Porig and pred interval with imputed heterogeneity: If there is moderate or high within-pair effect heterogeneity, this could make the original studies appear less consistent with the replications than they truly are. As a sensitivity analysis, we will impute the average heterogeneity estimate from Olsson-Collentine, et al. (in press), which was tau=0.13 on the SMD scale, and use this to re-calculate Porig for each pair. These values of Porig will likely be large (i.e., indicating better consistency) than those from main analyses.
-
-
-# dataset has already been aggregated to either the outcome- or the experiment-level
-# if this hits errors, it's likely that you have mismatches in the NA dataframe vs. the filled-in one in analyze_one_row
-
 # all the pw.XXX metrics are calculating using the ES3's (i.e., SMDs)
-dat = dat %>% 
+# retain non-quant pairs since we will also create plots and metrics for those below
+do = do %>% 
   rowwise() %>% 
   mutate( analyze_one_row(origES3,
                           origVar3, 
@@ -118,32 +68,35 @@ dat = dat %>%
 # # ratio sanity checks:fexptable
 
 # # @@note that some ratios and their variances are extremely large:
-# inds = which(dat$pw.ratioVar > 100000)
-# dat$pw.ratio[inds]
+# inds = which(do$pw.ratioVar > 100000)
+# do$pw.ratio[inds]
 # 
 # i = 5
-# origES2 = dat$origES2[i]
-# origVar2 = dat$origVar2[i]
-# repES2 = dat$repES2[i]
-# repVar2 = dat$repVar2[i]
+# origES2 = do$origES2[i]
+# origVar2 = do$origVar2[i]
+# repES2 = do$repES2[i]
+# repVar2 = do$repVar2[i]
 # 
 # deltamethod( ~ x1/x2,
 #              mean = c( origES2, repES2 ), cov = diag( c(origVar2, repVar2) ) )^2
 # 
 # 
-# for ( i in 1:nrow(dat) ) {
+# for ( i in 1:nrow(do) ) {
 #   # debug any rows that are brats
-#   chunk = analyze_one_row( dat$origES2[i],
-#                    dat$origVar2[i],
-#                    dat$repES2[i],
-#                    dat$repVar2[i],
-#                    dat$ES2type[i])
+#   chunk = analyze_one_row( do$origES2[i],
+#                    do$origVar2[i],
+#                    do$repES2[i],
+#                    do$repVar2[i],
+#                    do$ES2type[i])
 #   if ( i == 1 ) res = chunk
 #   if ( i > 1) res = rbind(res, chunk)
 # 
 # }
 
-write_interm(dat, "intermediate_analysis_dataset_step2.csv")
+
+# save it
+setwd(prepped.data.dir)
+fwrite(do, "prepped_outcome_level_data_pw_metrics.csv")
 
 
 ################################ META-REGRESSION ################################ 
@@ -177,11 +130,11 @@ modVars = c("expAnimal",
             "responseQuality",
             "changesNeeded")
 
-CreateTableOne(vars = modVars, data = dat)
+CreateTableOne(vars = modVars, data = do)
 
 # moderator correlation matrix
 library(corrr)
-corrs = dat %>%
+corrs = do %>%
   filter(quantPair == TRUE) %>%
   select(modVars) %>%
   correlate( use = "pairwise.complete.obs" ) %>%
@@ -195,8 +148,9 @@ corrs$r = round(corrs$r, 2)
 corrs = corrs[ !is.na(corrs$r), ]
 View(corrs)
 
+# save it
 setwd(results.dir)
-setwd("Tables to prettify")
+setwd("Additional tables and figures")
 write.csv(corrs, "moderator_cormat.csv")
 
 
@@ -211,7 +165,7 @@ if ( exists("modTable") ) rm(modTable)
 
 for ( i in outcomesWithVar ) {
   
-  modTable = safe_analyze_moderators(  .dat = dat[ dat$quantPair == TRUE, ],
+  modTable = safe_analyze_moderators(  .dat = do[ do$quantPair == TRUE, ],
                                        yi.name = i,
                                        # below assumes a standardized naming convention for
                                        #  variances of the pairwise metrics:
@@ -245,7 +199,7 @@ outcomesWithoutVar = c("pw.ratio",
 #if ( exists("modTable") ) rm(modTable)
 
 for ( i in outcomesWithoutVar ) {
-  modTable = safe_analyze_moderators(  .dat = dat[ dat$quantPair == TRUE, ],
+  modTable = safe_analyze_moderators(  .dat = do[ do$quantPair == TRUE, ],
                                        yi.name = i,
                                        # below assumes a standardized naming convention for
                                        vi.name = NA,
@@ -266,13 +220,12 @@ table(modTable$Problems)
 
 
 setwd(results.dir)
-setwd("Tables to prettify")
-write.csv(modTable, "moderator_regressions.csv")
+setwd("Main tables")
+write.csv(modTable, "moderator_regressions_outcome_level.csv")
 
 
 
-################################ TABLE: EXPT-LEVEL SUMMARIES OF PAIRWISE METRICS ################################ 
-
+################################ CREATE EXPT-LEVEL DATASET AND TABLE ################################ 
 
 # table of pairwise metrics aggregated sat the experiment level (~50 rows)
 
@@ -280,10 +233,57 @@ write.csv(modTable, "moderator_regressions.csv")
 stringsWith( pattern = "pw", x = names(dat) )
 
 
-expTable = dat %>%
+##### Dataset #####
+
+# @@to do:
+# - aggregate origES3, etc., so we can make the difference plot
+# # FE meta-analysis of original and replications
+# FEmod = rma.uni( yi = c(origES3, repES3),
+#                  vi = c(origVar3, repVar3),
+#                  method = "FE")
+
+# entries are numerical and not rounded for plotting, analysis, etc.
+# this DOES include the non-quant pairs for plotting purposes
+# keep pw.XXX variable names the same to facilitate automated plotting below
+de = do %>%
+  #filter( quantPair == TRUE ) %>%
+  group_by(peID) %>%
+  summarise( nOutcomes = n(),
+             
+             pw.FEest = mean(pw.FEest),
+             pw.ratio = mean(pw.ratio),
+             
+             pw.PIRepInside = mean(pw.PIRepInside),
+             pw.PIRepInside.sens = mean(pw.PIRepInside.sens), 
+             # @@note: better to suse p.hmp here becuase it's asymptotically exact,
+             #  but it was giving error messages
+             pw.Porig = harmonic_p(pw.Porig),
+             pw.Porig.sens = harmonic_p(pw.PorigSens),
+             
+             # overall proportion (within this experiment) expected to agree
+             # @@insert actual sig agreement
+             pw.SigAgree = 100* mean(repSignif == origSignif & repDirection == origDirection),
+             pw.PercSigAgree1 = 100 * mean(pw.PsigAgree1)
+  ) 
+
+View(de)
+
+
+# save it
+setwd(prepped.data.dir)
+fwrite(de, "prepped_exp_level_data_pw_metrics.csv")
+
+
+##### Table #####
+
+# table does NOT include non-quant pairs
+expTable = do %>%
   filter( quantPair == TRUE ) %>%
   group_by(peID) %>%
   summarise( nOutcomes = n(),
+             
+             
+             origES3 = round( )
              
              FEest = round( mean(pw.FEest), 2 ),
              Ratio = round( mean(pw.ratio), 2 ),
@@ -305,433 +305,498 @@ View(expTable)
 
 # save it
 setwd(results.dir)
-fwrite(expTable, "exp_level_pairwise_summary.csv")
-
-#bm
-
-# also make a numerical version that doesn't use strings
-# this is for plotting, etc.
-de = dat %>%
-  filter( quantPair == TRUE ) %>%
-  group_by(peID) %>%
-  summarise( nOutcomes = n(),
-             
-             FEest = mean(pw.FEest),
-             Ratio = mean(pw.ratio),
-             
-             PIRepInside = mean(pw.PIRepInside),
-             PIRepInside.sens = mean(pw.PIRepInside.sens), 
-             # @@note: better to suse p.hmp here becuase it's asymptotically exact,
-             #  but it was giving error messages
-             Porig = harmonic_p(pw.Porig),
-             Porig.sens = harmonic_p(pw.PorigSens),
-             
-             # overall proportion (within this experiment) expected to agree
-             # @@insert actual sig agreement
-             SigAgree = 100* mean(repSignif == origSignif & repDirection == origDirection),
-             PercSigAgree1 = 100 * mean(pw.PsigAgree1)
-  ) 
-
-View(de)
-
-# save it
-setwd(results.dir)
-fwrite(de, "exp_level_pairwise_summary_numerical.csv")
-
-##### Summary metrics of these data #####
-
-# do me
+setwd("Main tables")
+fwrite(expTable, "pw_metrics_table_exp_level.csv")
 
 
 
-#################################### RPP-STYLE SCATTERPLOT ###################################
-
-dat = read_interm("intermediate_analysis_dataset_step2.csv")
 
 
-library(ggalt)
-library(tidyverse)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+#             AT MULTIPLE LEVELS OF ANALYSIS: SUMMARY PLOTS AND STATS               #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-# exclude 2 really extreme originals because they mess up plot scaling
-dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) %>%
-                   filter(origES3 < 50) )
 
+
+
+analysisLevels = c("exp_level", "outcome_level")
+
+
+for ( l in analysisLevels ) {
+  
+  # test only
+  l = "outcome_level"
+  
+  if ( l == "outcome_level" ) dat = do
+  if ( l == "exp_level" ) dat = de
+  
+  
+  ################ SUMMARY METRICS FOR MANUSCRIPT ################
+  
+  # Percent sign agreement: The percentage of replications whose estimates agree in direction with the original study. This could be heuristically compared to the 50% that would be expected by chance if the null holds exactly in every replication (i.e., no effect heterogeneity) and conditional on all originals’ being positive in sign.
+  
+  
+  if ( l == "outome_level" ) {
+    table(dat$origDirection, dat$repDirection, useNA = "ifany")
+    
+    update_result_csv( name = "n (perc) same direction all pairs outcome_level",
+                       value = n_perc_string(dat$repDirection == "Positive") )
+  }
+  
+  
+  
+  ################# RPP-STYLE SCATTERPLOT ################
+  
+  #bm
+  # exclude 2 really extreme originals because they mess up plot scaling
+  dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) %>%
+                     filter(origES3 < 50) )
+  
+  # # randomly sample for testing purposes
+  # set.seed(2)
+  # dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
+  # #dp = dat[1:10,]
+  dp$plotID = dp$peoID # with eye toward functionizing
+  
+  #@move this
+  dp$expType.pretty = NA
+  dp$expType.pretty[ dp$expAnimal == TRUE ] = "Animal"
+  dp$expType.pretty[ dp$expAnimal == FALSE ] = "Not animal"
+  
+  
+  min( c(dp$origES3, dp$repES3), na.rm = TRUE )
+  xmin = -4
+  max( c(dp$origES3, dp$repES3), na.rm = TRUE ) 
+  xmax = 30
+  
+  shapes = c(19, 1)
+  
+  p = ggplot( data = dp,
+              aes(x = origES3,
+                  y = repES3,
+                  color = expType.pretty,
+                  shape = repES3 < origES3 ) ) + 
+    
+    # null
+    geom_abline(intercept = 0,
+                slope = 1,
+                lty = 2,
+                color = "gray") +
+    
+    geom_hline( yintercept = 0,
+                lty = 1,
+                color = "gray" ) +
+    
+    geom_vline( xintercept = 0,
+                lty = 1,
+                color = "gray" ) +
+    
+    geom_point( size = 2.4,
+                #pch = 1,
+                alpha = 1) +
+    
+    # basic prettifying
+    theme_bw() +
+    theme( panel.grid.major=element_blank(),
+           panel.grid.minor=element_blank() ) +
+    
+    scale_color_manual( values = colors ) +
+    scale_shape_manual( values = shapes ) +
+    scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+    scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+    
+    labs( color = "Experiment type",
+          shape = "Original > replication" ) +
+    xlab("Original study estimate (SMD)") +
+    ylab("Replication study estimate (SMD)")
+  
+  
+  # save it
+  setwd(results.dir)
+  setwd("Main figures")
+  ggsave( paste( "plot_scatter", "_", l, ".pdf", sep = "" ),
+          width = 6.5,
+          height = 5)
+  
+  
+  
+  ################# WATERFALL PLOT OF DIFFERENCES ################
+  
+  dp = dp %>%
+    arrange( desc(pw.diff) )
+  
+  dp$ind = 1:nrow(dp)
+  
+  
+  
+  p = ggplot( ) +
+    
+    # null
+    geom_hline(yintercept = 0,
+               lty = 2,
+               color = "gray") +
+    
+    # color-coded by experiment type
+    geom_point( data = dp,
+                aes(x = ind,
+                    y = pw.diff,
+                    color = expType.pretty) ) +
+    
+    geom_errorbar( data = dp,
+                   aes(x = ind,
+                       ymin = pw.diff - qnorm(.975) * sqrt(pw.diffVar),
+                       ymax = pw.diff + qnorm(.975) * sqrt(pw.diffVar),
+                       color = expType.pretty),
+                   alpha = 0.4) +
+    
+    
+    # basic prettifying
+    theme_bw() +
+    theme( panel.grid.major=element_blank(),
+           panel.grid.minor=element_blank() ) +
+    
+    scale_color_manual( values = colors ) +
+    #scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+    #scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+    
+    labs( color = "Experiment type" ) +
+    xlab("Pair") +
+    ylab("Replication - original estimate (SMD)")
+  
+  
+  # save it
+  setwd(results.dir)
+  setwd("Main figures")
+  ggsave(paste( "plot_waterfall_diffs", "_", l, ".pdf", sep = "" ),
+         width = 5,
+         height = 10)
+  
+  
+  
+  
+  ################# DUMBBELL PLOT OF DIFFERENCES ################
+  
+  # great info on dumbbell plot in ggplot:
+  # https://towardsdatascience.com/create-dumbbell-plots-to-visualize-group-differences-in-r-3536b7d0a19a
+  
+  # dp = droplevels( dat %>% dplyr::filter( !is.na(origES2) & !is.na(repES2) & ES2type != "" ) %>%
+  #                    dplyr::filter(ES2type %in% c("Cohen's d", "Glass' delta", "Log hazard ratio", "Cohen's dz") ) )
+  # # randomly sample for testing purposes
+  # set.seed(2)
+  # dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
+  # #dp = dat[1:10,]
+  dp$plotID = dp$peoID # with eye toward functionizing
+  
+  
+  repColor <- "#0171CE"
+  origColor <- "#DE4433"
+  digits = 2
+  
+  
+  dp = dp %>% arrange( desc(origES3) )
+  
+  # @move this?
+  dp$pw.Porig.cat = ">= 0.05"
+  dp$pw.Porig.cat[ dp$pw.Porig < 0.005 ] = "< 0.005"
+  dp$pw.Porig.cat[ dp$pw.Porig >= 0.005 & dp$pw.Porig < 0.05 ] = "< 0.05"
+  Porig.colors = c("red", "black", "gray")
+  
+  
+  p = ggplot() + 
+    
+    coord_flip() +
+
+    
+    # null
+    geom_vline(xintercept = 0,
+               lty = 2,
+               color = "gray") +
+    
+    # geom_segment(data = dp,
+    #              aes(y=plotID,
+    #                  yend=plotID,
+    #                  x=0,
+    #                  xend=.5),
+    #              color="#b2b2b2",
+    #              size=0.15) +
+    
+    geom_dumbbell(data=dp,
+                  aes(y=1:nrow(dp),
+                      x=origES3,
+                      xend=repES3,
+                      color = pw.Porig.cat),
+                  size=1.5,
+                  
+                  #color="#b2b2b2",
+                  size_x=3,
+                  size_xend = 3,
+                  colour_x = origColor,
+                  colour_xend = repColor) +
+    
+    scale_color_manual( values = Porig.colors ) +
+    labs(color = "Porig") +
+    
+    
+    # basic prettifying
+    theme_bw() +
+    theme( panel.grid.major=element_blank(),
+           panel.grid.minor=element_blank() ) +
+    
+    xlab("Point estimate") +
+    ylab("Pair")
+    
+  
+  # save it
+  setwd(results.dir)
+  setwd("Main figures")
+  ggsave( paste( "plot_dumbbell", "_", l, ".pdf", sep = "" ),
+          width = 12,
+          height = 5)
+  
+  
+}  # end giant loop over analysis levels
+
+
+
+
+
+# # OLD (BUT DEFINITELY NEED CODE, LIKE FOR WATERFALL):
+# ##### Upper Panel: Ordered ratios ######
+# 
+# dp = dp %>% filter( !is.na(ESgroup) ) %>%
+#   arrange(desc(repES2 / origES2))
+# 
+# dp$ind = 1:nrow(dp)
+# 
+# 
+# # only use CI if variance of ratio is less than 10
+# 
+# p = ggplot() +
+#   
+#   # null
+#   geom_hline(yintercept = 100,
+#              lty = 2,
+#              color = "gray") +
+#   
+#   
+#   geom_point( data = dp,
+#               aes(x = ind,
+#                   y = 100*(repES2 / origES2),
+#                   color = ESgroup) ) +
+#   
+#   # geom_errorbar( data = dp,
+#   #                aes(ymin = pw.ratio - qnorm(.975) * pw.ratioVar,
+#   #                    ymax = pw.ratio + qnorm(.975) * pw.ratioVar,
+#   #                    color = ESgroup) ) +
+#   
+#   scale_y_log10() +
+#   
+#   # basic prettifying
+#   theme_bw() +
+#   theme( panel.grid.major=element_blank(),
+#          panel.grid.minor=element_blank() ) +
+#   
+#   ylab("Replication percent of original (logged axis)")
+# 
+# 
+# 
+# #################################### DUMBBELL PLOT################
+# 
+# 
+# # great info on dumbbell plot in ggplot:
+# # https://towardsdatascience.com/create-dumbbell-plots-to-visualize-group-differences-in-r-3536b7d0a19a
+# 
+# dat = read_interm("intermediate_analysis_dataset_step2.csv")
+# 
+# 
+# library(ggalt)
+# library(tidyverse)
+# 
+# dp = droplevels( dat %>% dplyr::filter( !is.na(origES2) & !is.na(repES2) & ES2type != "" ) %>%
+#                    dplyr::filter(ES2type %in% c("Cohen's d", "Glass' delta", "Log hazard ratio", "Cohen's dz") ) )
 # # randomly sample for testing purposes
 # set.seed(2)
 # dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
 # #dp = dat[1:10,]
-dp$plotID = dp$peoID # with eye toward functionizing
-
-#@move this
-dp$expType.pretty = NA
-dp$expType.pretty[ dp$expAnimal == TRUE ] = "Animal"
-dp$expType.pretty[ dp$expAnimal == FALSE ] = "Not animal"
-
-
-min( c(dp$origES3, dp$repES3), na.rm = TRUE )
-xmin = -4
-max( c(dp$origES3, dp$repES3), na.rm = TRUE ) 
-xmax = 30
-
-colors = c("red", "black")
-
-p = ggplot( data = dp,
-            aes(x = origES3,
-                y = repES3,
-                color = expType.pretty ) ) + 
-  
-  # null
-  geom_abline(intercept = 0,
-              slope = 1,
-              lty = 2,
-              color = "gray") +
-  
-  geom_hline( yintercept = 0,
-              lty = 1,
-              color = "gray" ) +
-  
-  geom_vline( xintercept = 0,
-              lty = 1,
-              color = "gray" ) +
-  
-  geom_point( size = 2.4,
-              pch = 1,
-              alpha = 1) +
-  
-  # basic prettifying
-  theme_bw() +
-  theme( panel.grid.major=element_blank(),
-         panel.grid.minor=element_blank() ) +
-  
-  scale_color_manual( values = colors ) +
-  scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
-  scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
-  
-  labs( color = "Experiment type" ) +
-  xlab("Original study estimate (SMD)") +
-  ylab("Replication study estimate (SMD)")
-
-
-# save it
-setwd(results.dir)
-ggsave("plot_scatter.pdf",
-       width = 5,
-       height = 6.5)
-
-
-
-#################################### WATERFALL PLOT OF DIFFERENCES ###################################
-
-dp = dp %>%
-  arrange( desc(pw.diff) )
-
-dp$ind = 1:nrow(dp)
-
-
-# again excludes the 2 really extreme originals
-p = ggplot( ) +
-  
-  # null
-  geom_hline(yintercept = 0,
-             lty = 2,
-             color = "gray") +
-
-  # color-coded by experiment type
-  geom_point( data = dp,
-              aes(x = ind,
-                  y = pw.diff,
-                  color = expType.pretty) ) +
-  
-  geom_errorbar( data = dp,
-                 aes(x = ind,
-                     ymin = pw.diff - qnorm(.975) * sqrt(pw.diffVar),
-                     ymax = pw.diff + qnorm(.975) * sqrt(pw.diffVar),
-                     color = expType.pretty),
-                 alpha = 0.4) +
-  
-  
-  # basic prettifying
-  theme_bw() +
-  theme( panel.grid.major=element_blank(),
-         panel.grid.minor=element_blank() ) +
-  
-  scale_color_manual( values = colors ) +
-  #scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
-  #scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
-  
-  labs( color = "Experiment type" ) +
-  xlab("Pair") +
-  ylab("Replication - original estimate (SMD)")
-
-
-# save it
-setwd(results.dir)
-ggsave("plot_waterfall_diffs.pdf",
-       width = 5,
-       height = 10)
-
-
-
-#bm - good job! 
-
-
-
-# -	eLife: no table/figure limit; figure supplements
-
-
-# -	Dumbbell: order by original size; dot size proportional to original; flip orientation to match waterfall; could use color-coding for categories of Porig (0.05, 0.10, etc.)
-
-
-# -	Separate figure for representative images (just the replication estimates; color-coded); Tim needs to get SMDs for us to do this)
-
-
-
-
-
-
-
-
-
-
-
-
-# OLD (BUT DEFINITELY NEED CODE, LIKE FOR WATERFALL):
-##### Upper Panel: Ordered ratios ######
-
-dp = dp %>% filter( !is.na(ESgroup) ) %>%
-  arrange(desc(repES2 / origES2))
-
-dp$ind = 1:nrow(dp)
-
-
-# only use CI if variance of ratio is less than 10
-
-p = ggplot() +
-  
-  # null
-  geom_hline(yintercept = 100,
-             lty = 2,
-             color = "gray") +
-  
-  
-  geom_point( data = dp,
-              aes(x = ind,
-                  y = 100*(repES2 / origES2),
-                  color = ESgroup) ) +
-  
-  # geom_errorbar( data = dp,
-  #                aes(ymin = pw.ratio - qnorm(.975) * pw.ratioVar,
-  #                    ymax = pw.ratio + qnorm(.975) * pw.ratioVar,
-  #                    color = ESgroup) ) +
-  
-  scale_y_log10() +
-  
-  # basic prettifying
-  theme_bw() +
-  theme( panel.grid.major=element_blank(),
-         panel.grid.minor=element_blank() ) +
-  
-  ylab("Replication percent of original (logged axis)")
-
-
-
-#################################### DUMBBELL PLOT ###################################
-
-
-# great info on dumbbell plot in ggplot:
-# https://towardsdatascience.com/create-dumbbell-plots-to-visualize-group-differences-in-r-3536b7d0a19a
-
-dat = read_interm("intermediate_analysis_dataset_step2.csv")
-
-
-library(ggalt)
-library(tidyverse)
-
-dp = droplevels( dat %>% dplyr::filter( !is.na(origES2) & !is.na(repES2) & ES2type != "" ) %>%
-                   dplyr::filter(ES2type %in% c("Cohen's d", "Glass' delta", "Log hazard ratio", "Cohen's dz") ) )
-# randomly sample for testing purposes
-set.seed(2)
-dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
-#dp = dat[1:10,]
-dp$plotID = dp$peoID # with eye toward functionizing
-
-
-repColor <- "#0171CE"
-origColor <- "#DE4433"
-digits = 2
-
-stringPanelWidth = 3
-panelSpacer = 1
-
-max( c(dp$origES2, dp$repES2), na.rm = TRUE )  # use this to inform stringPanel1Start
-stringPanel1Start = 15  # an x-axis coordinate
-stringPanel1End = stringPanel1Start + stringPanelWidth  # x-axis 
-
-stringPanel2Start = stringPanel1End + panelSpacer
-stringPanel2End = stringPanel2Start + stringPanelWidth
-
-
-# for labeling joy, have a df with just the first row to appear in plot
-# which is actually the LAST row in the LAST ES2type
-temp = dp[ dp$ES2type == unique(dp$ES2type)[1], ]  
-# sort in order to match ggplot's ordering
-dpRow = temp[ temp$peoID == rev( sort(temp$peoID) )[1], ] 
-#dpRow = dp[ dp$plotID == dp$plotID[ nrow(dp) ], ]
-#dpRow = dp[ dp$plotID == dp$plotID[ 1 ], ]
-
-
-p = ggplot() + 
-  
-  facet_grid(ES2type ~ .,
-             scales = "free",
-             space = "free"
-             #space = "free_y"
-  ) +
-  
-  # null
-  geom_vline(xintercept = 0,
-             lty = 2,
-             color = "gray") +
-  
-  geom_segment(data = dp,
-               aes(y=plotID,
-                   yend=plotID,
-                   x=0,
-                   xend=.5),
-               color="#b2b2b2",
-               size=0.15) +
-  
-  geom_dumbbell(data=dp,
-                aes(y=plotID,
-                    x=origES2,
-                    xend=repES2),
-                size=1.5,
-                color="#b2b2b2",
-                size_x=3,
-                size_xend = 3,
-                colour_x = origColor,
-                colour_xend = repColor) +
-  
-  # "Original" and "Replication" labels
-  # data arg: only label one of the rows
-  geom_text( data= dpRow,
-             aes(x=repES2,
-                 y=plotID,
-                 label="Replication"),
-             color=repColor,
-             size=3,
-             vjust=-1.5,
-             fontface="bold") +
-  
-  geom_text( data= dpRow,
-             aes(x=origES2,
-                 y=plotID,
-                 label="Original"),
-             color=origColor,
-             size=3,
-             vjust=-1.5,
-             fontface="bold") +
-  
-  # numerical labels
-  geom_text(data=dp,
-            aes(x=repES2,
-                y=plotID,
-                label= round(repES2, digits) ),
-            color=repColor,
-            size=2.75,
-            vjust=2.5) +
-  
-  geom_text(data=dp,
-            aes(x=origES2,
-                y=plotID,
-                label= round(origES2, digits) ),
-            color=origColor,
-            size=2.75,
-            vjust=2.5) +
-  
-  ##### differences panel
-  geom_rect(data=dp,
-            aes(xmin=stringPanel1Start,  # hard-coded location
-                xmax=stringPanel1End,
-                ymin=-Inf,
-                ymax=Inf),
-            fill="grey") +
-  
-  geom_text(data=dp,
-            aes(label = round( origES2 - repES2, digits ),
-                y=plotID,
-                x= mean( c(stringPanel1Start, stringPanel1End) ) ),
-            #fontface="bold",
-            size=3) +
-  # header
-  geom_text(data=dpRow, 
-            aes(x=mean( c(stringPanel1Start, stringPanel1End) ),  # needs to match above
-                y=plotID,
-                label="Original - replication"),
-            color="black",
-            size=3.1,
-            vjust=-2,
-            fontface="bold") 
-
-
-
-# bm
-# Porig panel
-p + geom_rect(data=dp,
-              aes(xmin=stringPanel2Start,  # hard-coded location
-                  xmax=stringPanel2End,
-                  ymin=-Inf,
-                  ymax=Inf),
-              fill="grey") +
-  
-  geom_text(data=dp,
-            aes(label = round( pw.Porig, digits ),
-                y=plotID,
-                x=mean( c(stringPanel2Start, stringPanel2End) ) ),
-            #fontface="bold",
-            size=3) +
-  
-  geom_text(data=dpRow, 
-            aes(x=mean( c(stringPanel2Start, stringPanel2End) ),  # needs to match above
-                y=plotID,
-                #label = TeX("$P_{orig}$")
-                label="Porig"
-            ),
-            #label = "asdfd",
-            #label = TeX("$P_{orig}$"),
-            #label = expression(paste("DOC (mg ", L^-1,")")),
-            color="black",
-            size=3.1,
-            vjust=-2,
-            fontface="bold") + 
-  
-  # basic prettifying
-  theme_bw() +
-  theme( panel.grid.major=element_blank(),
-         panel.grid.minor=element_blank() ) +
-  
-  xlab("Point estimate") +
-  ylab("Paper, experiment, and outcome")
-
-
-
-
-
-
-
-# # 15 x 9 works well
-# # save
-# setwd(objects.dir)
-# ggsave( "forest.pdf",
-#         width = 15,
-#         height = 10,
-#         units = "in" )
-# setwd(results.overleaf)
-# ggsave( "forest.pdf",
-#         width = 15,
-#         height = 9,
-#         units = "in" )
-
+# dp$plotID = dp$peoID # with eye toward functionizing
+# 
+# 
+# repColor <- "#0171CE"
+# origColor <- "#DE4433"
+# digits = 2
+# 
+# stringPanelWidth = 3
+# panelSpacer = 1
+# 
+# max( c(dp$origES2, dp$repES2), na.rm = TRUE )  # use this to inform stringPanel1Start
+# stringPanel1Start = 15  # an x-axis coordinate
+# stringPanel1End = stringPanel1Start + stringPanelWidth  # x-axis 
+# 
+# stringPanel2Start = stringPanel1End + panelSpacer
+# stringPanel2End = stringPanel2Start + stringPanelWidth
+# 
+# 
+# # for labeling joy, have a df with just the first row to appear in plot
+# # which is actually the LAST row in the LAST ES2type
+# temp = dp[ dp$ES2type == unique(dp$ES2type)[1], ]  
+# # sort in order to match ggplot's ordering
+# dpRow = temp[ temp$peoID == rev( sort(temp$peoID) )[1], ] 
+# #dpRow = dp[ dp$plotID == dp$plotID[ nrow(dp) ], ]
+# #dpRow = dp[ dp$plotID == dp$plotID[ 1 ], ]
+# 
+# 
+# p = ggplot() + 
+#   
+#   facet_grid(ES2type ~ .,
+#              scales = "free",
+#              space = "free"
+#              #space = "free_y"
+#   ) +
+#   
+#   # null
+#   geom_vline(xintercept = 0,
+#              lty = 2,
+#              color = "gray") +
+#   
+#   geom_segment(data = dp,
+#                aes(y=plotID,
+#                    yend=plotID,
+#                    x=0,
+#                    xend=.5),
+#                color="#b2b2b2",
+#                size=0.15) +
+#   
+#   geom_dumbbell(data=dp,
+#                 aes(y=plotID,
+#                     x=origES2,
+#                     xend=repES2),
+#                 size=1.5,
+#                 color="#b2b2b2",
+#                 size_x=3,
+#                 size_xend = 3,
+#                 colour_x = origColor,
+#                 colour_xend = repColor) +
+#   
+#   # "Original" and "Replication" labels
+#   # data arg: only label one of the rows
+#   geom_text( data= dpRow,
+#              aes(x=repES2,
+#                  y=plotID,
+#                  label="Replication"),
+#              color=repColor,
+#              size=3,
+#              vjust=-1.5,
+#              fontface="bold") +
+#   
+#   geom_text( data= dpRow,
+#              aes(x=origES2,
+#                  y=plotID,
+#                  label="Original"),
+#              color=origColor,
+#              size=3,
+#              vjust=-1.5,
+#              fontface="bold") +
+#   
+#   # numerical labels
+#   geom_text(data=dp,
+#             aes(x=repES2,
+#                 y=plotID,
+#                 label= round(repES2, digits) ),
+#             color=repColor,
+#             size=2.75,
+#             vjust=2.5) +
+#   
+#   geom_text(data=dp,
+#             aes(x=origES2,
+#                 y=plotID,
+#                 label= round(origES2, digits) ),
+#             color=origColor,
+#             size=2.75,
+#             vjust=2.5) +
+#   
+#   ##### differences panel
+#   geom_rect(data=dp,
+#             aes(xmin=stringPanel1Start,  # hard-coded location
+#                 xmax=stringPanel1End,
+#                 ymin=-Inf,
+#                 ymax=Inf),
+#             fill="grey") +
+#   
+#   geom_text(data=dp,
+#             aes(label = round( origES2 - repES2, digits ),
+#                 y=plotID,
+#                 x= mean( c(stringPanel1Start, stringPanel1End) ) ),
+#             #fontface="bold",
+#             size=3) +
+#   # header
+#   geom_text(data=dpRow, 
+#             aes(x=mean( c(stringPanel1Start, stringPanel1End) ),  # needs to match above
+#                 y=plotID,
+#                 label="Original - replication"),
+#             color="black",
+#             size=3.1,
+#             vjust=-2,
+#             fontface="bold") 
+# 
+# 
+# 
+# # bm
+# # Porig panel
+# p + geom_rect(data=dp,
+#               aes(xmin=stringPanel2Start,  # hard-coded location
+#                   xmax=stringPanel2End,
+#                   ymin=-Inf,
+#                   ymax=Inf),
+#               fill="grey") +
+#   
+#   geom_text(data=dp,
+#             aes(label = round( pw.Porig, digits ),
+#                 y=plotID,
+#                 x=mean( c(stringPanel2Start, stringPanel2End) ) ),
+#             #fontface="bold",
+#             size=3) +
+#   
+#   geom_text(data=dpRow, 
+#             aes(x=mean( c(stringPanel2Start, stringPanel2End) ),  # needs to match above
+#                 y=plotID,
+#                 #label = TeX("$P_{orig}$")
+#                 label="Porig"
+#             ),
+#             #label = "asdfd",
+#             #label = TeX("$P_{orig}$"),
+#             #label = expression(paste("DOC (mg ", L^-1,")")),
+#             color="black",
+#             size=3.1,
+#             vjust=-2,
+#             fontface="bold") + 
+#   
+#   # basic prettifying
+#   theme_bw() +
+#   theme( panel.grid.major=element_blank(),
+#          panel.grid.minor=element_blank() ) +
+#   
+#   xlab("Point estimate") +
+#   ylab("Paper, experiment, and outcome")
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# # # 15 x 9 works well
+# # # save
+# # setwd(objects.dir)
+# # ggsave( "forest.pdf",
+# #         width = 15,
+# #         height = 10,
+# #         units = "in" )
+# # setwd(results.overleaf)
+# # ggsave( "forest.pdf",
+# #         width = 15,
+# #         height = 9,
+# #         units = "in" )
+# 
 
 
 
