@@ -99,6 +99,52 @@ setwd(prepped.data.dir)
 fwrite(do, "prepped_outcome_level_data_pw_metrics.csv")
 
 
+################################ MAKE CODEBOOK ################################ 
+
+# this includes only the new variables added to outcome-level data
+newVars = names(do)[104: length(names(do))]
+
+# codebook
+cb2 = data.frame( variable = newVars,
+                  type = NA,
+                  description = NA )
+
+# vec: vector of type and description
+update_codebook_row = function(var, vec) {
+  cb2[ cb2$variable == var, c("type", "description") ] <<- vec
+  
+}
+
+
+update_codebook_row( "repSignif", c("bin", "Was replication p<0.05?") )
+update_codebook_row( "origSignif", c("bin", "Was original p<0.05?") )
+
+update_codebook_row( "quantPair", c("bin", "Did we have quantitative ES for both original and replication?") )
+
+update_codebook_row( "origES2", c("num", "A meta-analyzable effect size obtained from ES (e.g., log-HR instead of HR), but NOT necessarily an SMD") )
+update_codebook_row( "ES2Type", c("char", "Scale of ES2") )
+
+
+update_codebook_row( "origES3", c("num", "A meta-analyzable effect size on the SMD scale") )
+
+update_codebook_row( "pw.PIRepInside", c("bin", "Was replication inside 95% PI?") )
+update_codebook_row( "pw.PIRepInsid.sens", c("bin", "Was replication inside 95% PI, allowing for hypothetical heterogeneity?") )
+
+update_codebook_row( "pw.Porig", c("num", "p-value for original inconsistency with replication") )
+update_codebook_row( "pw.PorigSens", c("num", "p-value for original inconsistency with replication, allowing for hypothetical heterogeneity") )
+
+update_codebook_row( "pw.ratio", c("num", "origES3 / repES3") )
+update_codebook_row( "pw.diff", c("num", "origES3 - repES3") )
+
+update_codebook_row( "pw.PsigAgree1", c("num", "Expected probability of significance agreement under null (Mathur & VanderWeele)") )
+
+update_codebook_row( "pw.FEest", c("num", "Fixed-effects estimate pooling original and replication") )
+
+
+# save it
+setwd(prepped.data.dir)
+fwrite(cb2, "codebook_for_prepped_data.csv")
+
 ################################ META-REGRESSION ################################ 
 
 # moderators are at experiment-level, but analysis is at outcome level with 
@@ -311,13 +357,14 @@ fwrite(expTable, "pw_metrics_table_exp_level.csv")
 
 
 
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #             AT MULTIPLE LEVELS OF ANALYSIS: SUMMARY PLOTS AND STATS               #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-
+# bm: All of this is working for the outcome-level data.
+#  If we want to run all of this at experiment level as well,
+#  will need to add some things to its creation (see notes above when making de dataset)
 
 analysisLevels = c("exp_level", "outcome_level")
 
@@ -336,18 +383,68 @@ for ( l in analysisLevels ) {
   # Percent sign agreement: The percentage of replications whose estimates agree in direction with the original study. This could be heuristically compared to the 50% that would be expected by chance if the null holds exactly in every replication (i.e., no effect heterogeneity) and conditional on all originals’ being positive in sign.
   
   
-  if ( l == "outome_level" ) {
-    table(dat$origDirection, dat$repDirection, useNA = "ifany")
+  if ( l == "outcome_level" ) {
+
+    update_result_csv( name = "n all pairs outcome_level",
+                       value = nrow(dat) )
+    
+    update_result_csv( name = "n (perc) non-quant pairs outcome_level",
+                       value = n_perc_string(dat$quantPair == FALSE) )
+    
+    update_result_csv( name = "n (perc) quant pairs outcome_level",
+                       value = n_perc_string(dat$quantPair == TRUE) )
     
     update_result_csv( name = "n (perc) same direction all pairs outcome_level",
                        value = n_perc_string(dat$repDirection == "Positive") )
+    
   }
   
+  update_result_csv( name = "n (perc) pw.PIRepInside outcome_level",
+                     value = n_perc_string(dat$pw.PIRepInside == TRUE) )
+  
+  update_result_csv( name = "n (perc) pw.PIRepInside.sens outcome_level",
+                     value = n_perc_string(dat$pw.PIRepInside.sens == TRUE) )
+  
+  update_result_csv( name = "Median Porig outcome_level",
+                     value = round( median(dat$pw.Porig, na.rm = TRUE), 3 ) )
+  
+  update_result_csv( name = "n (perc) Porig<0.005 outcome_level",
+                     value = n_perc_string(dat$pw.Porig < 0.005 ) )
+  
+  update_result_csv( name = "n (perc) Porig<0.05 outcome_level",
+                     value = n_perc_string(dat$pw.Porig < 0.05 ) )
+  
+  
+  update_result_csv( name = "Median PorigSens outcome_level",
+                     value = round( median(dat$pw.PorigSens, na.rm = TRUE), 3 ) )
+  
+  update_result_csv( name = "n (perc) PorigSens<0.005 outcome_level",
+                     value = n_perc_string(dat$pw.PorigSens < 0.005 ) )
+  
+  update_result_csv( name = "n (perc) PorigSens<0.05 outcome_level",
+                     value = n_perc_string(dat$pw.PorigSens < 0.05 ) )
+  
+  update_result_csv( name = "Median SMD ratio outcome_level",
+                     value = round( median(dat$pw.ratio, na.rm = TRUE), 2 ) )
+  
+  update_result_csv( name = "Median SMD diff outcome_level",
+                     value = round( median(dat$pw.diff, na.rm = TRUE), 2 ) )
+  
+  update_result_csv( name = "Median SMD FEest outcome_level",
+                     value = round( median(dat$pw.FEest, na.rm = TRUE), 2 ) )
+  
+  update_result_csv( name = "Median SMD origES3 outcome_level",
+                     value = round( median(dat$origES3, na.rm = TRUE), 2 ) )
+  
+  update_result_csv( name = "Median SMD repES3 outcome_level",
+                     value = round( median(dat$repES3, na.rm = TRUE), 2 ) )
+  
+  update_result_csv( name = "Mean PsigAgree1 outcome_level",
+                     value = round( mean(dat$pw.PsigAgree1, na.rm = TRUE), 2 ) )
   
   
   ################# RPP-STYLE SCATTERPLOT ################
-  
-  #bm
+
   # exclude 2 really extreme originals because they mess up plot scaling
   dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) %>%
                      filter(origES3 < 50) )
@@ -555,6 +652,45 @@ for ( l in analysisLevels ) {
   
   
 }  # end giant loop over analysis levels
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
