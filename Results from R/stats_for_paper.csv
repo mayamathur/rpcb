@@ -1,0 +1,19 @@
+name,value,section
+n all pairs outcome_level,136,NA
+n (perc) non-quant pairs outcome_level,39 (29%),NA
+n (perc) quant pairs outcome_level,97 (71%),NA
+n (perc) same direction all pairs outcome_level,65 (48%),NA
+n (perc) pw.PIRepInside outcome_level,56 (58%),NA
+n (perc) pw.PIRepInside.sens outcome_level,63 (65%),NA
+Median Porig outcome_level,0.065,NA
+n (perc) Porig<0.005 outcome_level,14 (14%),NA
+n (perc) Porig<0.05 outcome_level,41 (42%),NA
+Median PorigSens outcome_level,0.139,NA
+n (perc) PorigSens<0.005 outcome_level,9 (9%),NA
+n (perc) PorigSens<0.05 outcome_level,29 (30%),NA
+Median SMD ratio outcome_level,2.8,NA
+Median SMD diff outcome_level,2.15,NA
+Median SMD FEest outcome_level,0.97,NA
+Mean PsigAgree1 outcome_level,0.87,NA
+Median SMD origES3 outcome_level,3,NA
+Median SMD repES3 outcome_level,0.57,NA

@@ -1,0 +1,29 @@
+"","pID","eID","oID","Statistical.test.applied.to.original.data","Original.test.statistic.value","What.statistical.test.was.reported.","Original.test.statistic.type","origES"
+"1",12,3,1,NA,NA,NA,NA,NA
+"2",12,3,2,NA,NA,NA,NA,NA
+"3",15,2,2,"between-subjects ANOVA",0.04874,"between-subjects ANOVA","F",0.0599781834272062
+"4",20,1,1,"Kruskal-Wallis rank sum test",0.8877569,NA,"chi-squared",0.1680213
+"5",20,2,3,"Spearman's rank correlation",0.6766662,"Spearman's rank correlation","rho",0.6766662
+"6",47,1,3,"between-subjects ANOVA",6.619672,NA,"F",0.8442984
+"7",47,1,4,"between-subjects ANOVA",10.48625,NA,"F",0.8928923
+"8",47,1,5,"between-subjects ANOVA",7.027372,NA,"F",0.8514205
+"9",47,1,6,"between-subjects ANOVA",0.627586,NA,"F",0.4364738
+"10",47,1,7,"between-subjects ANOVA",3.003348,NA,"F",0.7277978
+"11",47,1,10,"Spearman's rank correlation",0.744,"unknown","rho",0.744
+"12",47,1,11,"Spearman's rank correlation",0.819,"unknown","rho",0.819
+"13",47,1,12,"Spearman's rank correlation",0.732,"unknown","rho",0.732
+"14",47,1,13,"Spearman's rank correlation",0.667,"unknown","rho",0.667
+"15",47,1,14,"Spearman's rank correlation",0.713,"unknown","rho",0.713
+"16",48,2,1,"Wilcoxon signed-rank test",21.17035,"Mann-Whitney","z",0.5448031
+"17",48,2,1,"Wilcoxon signed-rank test",21.17035,"Mann-Whitney","z",0.5448031
+"18",48,2,2,"Wilcoxon signed-rank test",23.25822,NA,"z",0.5985329
+"19",48,2,2,"Wilcoxon signed-rank test",23.25822,NA,"z",0.5985329
+"20",48,2,3,"Wilcoxon signed-rank test",19.90605,NA,"z",0.5122673
+"21",48,2,3,"Wilcoxon signed-rank test",19.90605,NA,"z",0.5122673
+"22",48,2,4,"Wilcoxon signed-rank test",-1.997519,"Mann-Whitney","z",-0.08532978
+"23",48,2,4,"Wilcoxon signed-rank test",-1.997519,"Mann-Whitney","z",-0.08532978
+"24",48,2,5,"Wilcoxon signed-rank test",3.178593,NA,"z",0.1352899
+"25",48,2,5,"Wilcoxon signed-rank test",3.178593,NA,"z",0.1352899
+"26",48,2,6,"Wilcoxon signed-rank test",5.805936,NA,"z",0.2672399
+"27",48,2,6,"Wilcoxon signed-rank test",5.805936,NA,"z",0.2672399
+"28",50,1,1,"paired t test",4.999382,"paired t test","t",0.4507904

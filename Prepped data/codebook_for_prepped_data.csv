@@ -1,0 +1,58 @@
+variable,type,description
+repSignif,bin,Was replication p<0.05?
+origSignif,bin,Was original p<0.05?
+changesNeeded,,
+reqAntibodies,,
+reqCells,,
+Organisms,,
+reqPlasmids,,
+labType,,
+labType_a.Core.only,,
+labType_b.Both,,
+labType_c.CRO.only,,
+labType_NA,,
+expAnimal,,
+quantPair,bin,Did we have quantitative ES for both original and replication?
+peoID,,
+nInternal,,
+peID,,
+origES2,num,"A meta-analyzable effect size obtained from ES (e.g., log-HR instead of HR), but NOT necessarily an SMD"
+ES2type,,
+origESLo2,,
+origESHi2,,
+repES2,,
+repESLo2,,
+repESHi2,,
+origSE2,,
+repSE2,,
+origVar2,,
+repVar2,,
+origES3,num,A meta-analyzable effect size on the SMD scale
+origESLo3,,
+origESHi3,,
+repES3,,
+repESLo3,,
+repESHi3,,
+origSE3,,
+repSE3,,
+origVar3,,
+repVar3,,
+discrep,,
+badCI,,
+pw.PILo,,
+pw.PIHi,,
+pw.PIRepInside,bin,Was replication inside 95% PI?
+pw.PILo.sens,,
+pw.PIHi.sens,,
+pw.PIRepInside.sens,,
+pw.Porig,num,p-value for original inconsistency with replication
+pw.PorigSens,num,"p-value for original inconsistency with replication, allowing for hypothetical heterogeneity"
+pw.ratio,num,origES3 / repES3
+pw.ratioVar,,
+pw.diff,num,origES3 - repES3
+pw.diffVar,,
+pw.PsigAgree1,num,Expected probability of significance agreement under null (Mathur & VanderWeele)
+pw.FEest,num,Fixed-effects estimate pooling original and replication
+pw.FEestVar,,
+pw.FElo,,
+pw.FEhi,,

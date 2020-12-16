@@ -23,10 +23,10 @@ library(qdapTools)
 library(metafor)
 library(fastDummies)
 
-root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology"
+root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology/Code (git)"
 raw.data.dir = paste(root.dir, "Raw data", sep="/")
 prepped.data.dir = paste(root.dir, "Prepped data", sep="/")
-code.dir = paste(root.dir, "Code (git)", sep="/")
+code.dir = paste(root.dir, "Code", sep="/")
 
 setwd(code.dir)
 source("helper.R")
