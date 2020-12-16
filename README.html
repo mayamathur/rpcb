@@ -365,11 +365,33 @@ summary {
 </div>
 
 
-<div id="notes-on-analysis" class="section level2">
-<h2>Notes on analysis</h2>
+<div id="notes-on-analysis-dataset" class="section level2">
+<h2>Notes on analysis dataset</h2>
+<p>There is a <a href="https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv">codebook</a> for the analysis dataset. Variables prefaced with “pw.” are various pairwise metrics describing replication success.</p>
+</div>
+<div id="notes-on-analysis-methods" class="section level2">
+<h2>Notes on analysis methods</h2>
+<div id="moderator-analyses" class="section level3">
+<h3>Moderator analyses</h3>
+<p>We fit a separate model to each pairwise metric, regressing on all candidate moderators for each. Not all pairwise metrics have variances associated with them. We fit different, but comparable, models to pairwise metrics with and without variances. For outcomes that did have variances (pw.diff, pw.FEest), used rma.mv (nested random intercepts of eID within pID) with robust SEs under the CHE working model (multilevel random effects model with constant sampling correlation working model). For outcomes that did not have variances (“pw.ratio”, “pw.PIRepInside”, “pw.PIRepInside.sens”, “pw.Porig”, “pw.PorigSens”, “pw.PsigAgree1”), used lmer with same specification as above and robust SEs. Robust SEs account are both for clustering and possibility of non-normal residuals (e.g., for ratios).</p>
+</div>
 </div>
 <div id="notes-on-results-files" class="section level2">
 <h2>Notes on results files</h2>
+<p>All results files are in the directory <a href="https://github.com/mayamathur/rpcb/tree/master/Results%20from%20R">“Results from R”</a>. There are three kinds of results files:</p>
+<div id="string-results-for-manuscript" class="section level3">
+<h3>String results for manuscript</h3>
+<p>Stats that are to appear in the prose of the manuscript are written as strings to the file <a href="https://github.com/mayamathur/rpcb/blob/master/Results%20from%20R/stats_for_paper.csv">“stats_for_paper.csv”</a>.</p>
+</div>
+<div id="figures" class="section level3">
+<h3>Figures</h3>
+<p>At outcome level, the plots omit 2 pairs with extreme originals (SMD &gt; 80).</p>
+</div>
+<div id="tables" class="section level3">
+<h3>Tables</h3>
+<p>The table <a href="https://github.com/mayamathur/rpcb/blob/master/Results%20from%20R/Main%20tables/pw_metrics_table_exp_level.csv">pw_metrics_table_exp_level.csv</a> summarizes results by aggregating to the experiment level. Numerical and binary variables are summarized as means (or proportions) over outcomes within each experiment. Porig is a harmonic mean p-value over outcomes.</p>
+<p>The table <a href="https://github.com/mayamathur/rpcb/blob/master/Results%20from%20R/Main%20tables/moderator_regressions_outcome_level.csv">moderator_regressions_outcome_level.csv</a> shows the results of meta-regressions on the moderators.</p>
+</div>
 </div>
 <div id="to-do" class="section level2">
 <h2>To do</h2>
