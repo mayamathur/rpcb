@@ -218,7 +218,7 @@ for ( i in outcomesWithVar ) {
                                        vi.name = paste(i, "Var", sep=""),
                                        
                                        # cut out the "pw." part of outcome name
-                                       analysis.label = strsplit(i, "[.]")[[1]][2],
+                                       analysis.label = gsub("^.*?\\.","",i),
                                        
                                        modVars = modVars,
                                        
@@ -251,7 +251,7 @@ for ( i in outcomesWithoutVar ) {
                                        vi.name = NA,
                                        
                                        # cut out the "pw." part of outcome name
-                                       analysis.label = strsplit(i, "[.]")[[1]][2],
+                                       analysis.label = gsub("^.*?\\.","",i),
                                        
                                        modVars = modVars,
                                        
