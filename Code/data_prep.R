@@ -169,9 +169,9 @@ d2 = d %>% rename( pID = "Paper #",
                    # has strings that can be used to determine type of lab:
                    labsContracted = "Lab(s) contracted for the experiment",
                    materialsOffered = "Key materials offered to be shared",
-                   clarificationsAsked = "Clarifications asked of original authors",
+                   infoNeeded = "Clarifications asked of original authors",
                    #materialsRequested = "Key materials asked to be shared",
-                   responseQuality = "Quality of response from original authors",
+                   infoQuality = "Quality of response from original authors",
                    changesSuccess = "Changes able to be implemented during experimentation?",
                    # when this is NA, no mods were needed:
                    changesNeededProse = "If modifications were needed for experiment to proceed, what were they?")
@@ -211,30 +211,39 @@ table(d2$origSignif, d2$origDirection)
 d2$origDirection[ d2$origDirection == "" ] = NA
 d2$repDirection[ d2$repDirection == "" ] = NA
 
+
 # recode "changes needed" variable
 d2$changesNeeded = !is.na(d2$changesNeededProse)
 
 # recode "changes able to be implemented" variable
+# changesSuccess is basically the temporal successor to changesNeeded
 #@ this has too many levels to work well as a moderator; for now am dichotomizing
 #  at >=3 (i.e., moderately implemented or better)
 d2$changes = NA
 d2$changes[ is.na(d2$changesSuccess) ] = "c. No changes needed"
 d2$changes[ d2$changesSuccess < 3 ] = "b. LT moderate success" # "LT" = "less than"
 d2$changes[ d2$changesSuccess >= 3 ] = "a. GTE moderate success"  # "GTE" = "greater than or equal"
-# sanity check
+# sanity check on recoding
 table( d2$changes, d2$changesSuccess, useNA = "ifany")
-# sanity check for relationship with changesNeeded
+# sanity check: if no changes needed, change quality should be NA
 # @Tim: am I misunderstanding that the below should hold?
 expect_equal( d2$changesNeeded == FALSE, is.na(d2$changesSuccess) )  # not the same
 table( (d2$changesNeeded == FALSE) == is.na(d2$changesSuccess) )
 
+
+# recode "clarifications asked" variable
+# this is basically the temporal precendent to infoQuality
+table(d2$infoNeeded > 0)  # this means that they ALWAYS needed clarifications
+# so could just leave infoQuality as continuous variable
+# sanity check: if no info needed, info quality should be NA
+expect_equal( d2$infoNeeded == FALSE, is.na(d2$infoQuality) )
 
 
 
 #@: no longer in use
 # # make dummies from variables coded as comma-separated categories
 # # @IMPORTANT: note that response quality coding exists even if no materials were requested
-# table( is.na(d2$materialsRequested), d2$responseQuality )  
+# table( is.na(d2$materialsRequested), d2$infoQuality )  
 # d2 = recode_checkboxes(.d = d2,
 #                        var = "materialsRequested")
 # d2 = d2 %>% rename( "reqAntibodies"  = "Antibodies",
@@ -294,7 +303,7 @@ modVars = c("expAnimal",
             # "reqCells",
             # "reqPlasmids",
             "materialsShared",
-            "responseQuality",
+            "infoQuality",
             "changesNeeded")
 
 CreateTableOne( dat = d2 %>% select(analysisVars) %>%
@@ -711,7 +720,7 @@ write_interm(d3, "intermediate_dataset_step4.csv")
 # # has strings that can be used to determine type of lab:
 # labsContracted = "Lab(s) contracted for the experiment",
 # materialsRequested = "Key materials asked to be shared",
-# responseQuality
+# infoQuality
 
 # make exclusions
 # @@check with Tim
