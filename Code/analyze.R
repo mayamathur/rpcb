@@ -181,13 +181,9 @@ fwrite(cb2, "codebook_for_prepped_data.csv")
 
 ##### Moderator Summary Table and Correlation Matrix #####
 
-# must use dummies for labType here to get correlations
 modVars = c("expAnimal",
-            "labType_b.Both",
-            "labType_c.CRO.only",
-            # "reqAntibodies",
-            # "reqCells",
-            # "reqPlasmids",
+            "hasCROLab",
+            "hasCoreLab",
             "materialsShared",
             "infoQuality",
             "changes")

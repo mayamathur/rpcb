@@ -168,7 +168,7 @@ d2 = d %>% rename( pID = "Paper #",
                    expType = "Type of experiment",
                    # has strings that can be used to determine type of lab:
                    labsContracted = "Lab(s) contracted for the experiment",
-                   materialsOffered = "Key materials offered to be shared",
+                   materialsSharedProse = "Key materials offered to be shared",  # "1" suffix because we're going to recode it
                    infoNeeded = "Clarifications asked of original authors",
                    #materialsRequested = "Key materials asked to be shared",
                    infoQuality = "Quality of response from original authors",
@@ -212,7 +212,6 @@ d2$origDirection[ d2$origDirection == "" ] = NA
 d2$repDirection[ d2$repDirection == "" ] = NA
 
 
-# recode "changes needed" variable
 d2$changesNeeded = !is.na(d2$changesNeededProse)
 
 # recode "changes able to be implemented" variable
@@ -229,6 +228,9 @@ table( d2$changes, d2$changesSuccess, useNA = "ifany")
 # @Tim: am I misunderstanding that the below should hold?
 expect_equal( d2$changesNeeded == FALSE, is.na(d2$changesSuccess) )  # not the same
 table( (d2$changesNeeded == FALSE) == is.na(d2$changesSuccess) )
+# dummy-coded version of changes
+# only used for making the moderator correlation matrix
+d2 = dummy_cols(.data = d2, select_columns = "changes")
 
 
 # recode "clarifications asked" variable
@@ -237,7 +239,6 @@ table(d2$infoNeeded > 0)  # this means that they ALWAYS needed clarifications
 # so could just leave infoQuality as continuous variable
 # sanity check: if no info needed, info quality should be NA
 expect_equal( d2$infoNeeded == FALSE, is.na(d2$infoQuality) )
-
 
 
 #@: no longer in use
@@ -252,25 +253,29 @@ expect_equal( d2$infoNeeded == FALSE, is.na(d2$infoQuality) )
 
 # were (any) materials actually shared?
 # regardless of whether they were requested
-d2$materialsShared = "c. Not requested"
-d2$materialsShared[ !is.na(d2$materialsOffered) & d2$materialsOffered == "No" ] = "a.No"
-d2$materialsShared[ !is.na(d2$materialsOffered) & d2$materialsOffered != "No" ] = "b.Yes"
+d2$materialsShared = NA
+d2$materialsShared[ is.na(d2$materialsSharedProse) ] = "c. Not requested"
+d2$materialsShared[ !is.na(d2$materialsSharedProse) & d2$materialsSharedProse == "No" ] = "a.No"
+d2$materialsShared[ !is.na(d2$materialsSharedProse) & d2$materialsSharedProse != "No" ] = "b.Yes"
 # sanity check
-table( d2$materialsOffered, d2$materialsShared, useNA = "ifany" )
+table( d2$materialsSharedProse, d2$materialsShared, useNA = "ifany" )
+# dummy-coded version of materialsShared
+# only used for making the moderator correlation matrix
+d2 = dummy_cols(.data = d2, select_columns = "materialsShared")
 
 # recode lab type
-hasCRO = whichStrings( x = d2$labsContracted, pattern = "CRO" )
-hasCore = whichStrings( x = d2$labsContracted, pattern = "Core" )
-d2$labType = NA
-d2$labType[ hasCRO & !hasCore ] = "c.CRO only"
-d2$labType[ hasCRO & hasCore ] = "b.Both"
-d2$labType[ !hasCRO & hasCore ] = "a.Core only"
-# sanity check
-table(d2$labsContracted, d2$labType)
-
-# dummy-coded version of labType
-# only used for making the moderator correlation matrix
-d2 = dummy_cols(.data = d2, select_columns = "labType")
+d2$hasCROLab = whichStrings( x = d2$labsContracted, pattern = "CRO" )
+d2$hasCoreLab = whichStrings( x = d2$labsContracted, pattern = "Core" )
+# below is no longer in use:
+# d2$labType = NA
+# d2$labType[ hasCROLab & !hasCoreLab ] = "c.CRO only"
+# d2$labType[ hasCROLab & hasCoreLab ] = "b.Both"
+# d2$labType[ !hasCROLab & hasCoreLab ] = "a.Core only"
+# # sanity check
+# table(d2$labsContracted, d2$labType)
+# # dummy-coded version of labType
+# # only used for making the moderator correlation matrix
+# d2 = dummy_cols(.data = d2, select_columns = "labType")
 
 # recode experiment type as animal vs. non-animal
 d2$expAnimal = (d2$expType == "Animal")
@@ -298,13 +303,11 @@ analysisVars = analysisVars[ !analysisVars %in% c("Notes, Organisms")]
 # @@maybe move this?
 # moderators
 modVars = c("expAnimal",
-            "labType",
-            # "reqAntibodies",
-            # "reqCells",
-            # "reqPlasmids",
+            "hasCROLab",
+            "hasCoreLab",
             "materialsShared",
             "infoQuality",
-            "changesNeeded")
+            "changes")
 
 CreateTableOne( dat = d2 %>% select(analysisVars) %>%
                   select( -c("changesNeededProse", stringsWith("ID", names(d2) ) ) ) )
