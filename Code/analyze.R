@@ -565,8 +565,8 @@ for ( l in analysisLevels ) {
   setwd(results.dir)
   setwd("Main figures")
   ggsave(paste( "plot_waterfall_diffs", "_", l, ".pdf", sep = "" ),
-         width = 5,
-         height = 10)
+         width = 10,
+         height = 5)
   
   
   

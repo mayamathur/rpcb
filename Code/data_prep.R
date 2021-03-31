@@ -110,6 +110,7 @@ nrow(d)
 setwd(raw.data.dir)
 cd = fread("codebook_merged.csv")
 
+
 ################################ 1. RENAME VARIABLES ################################ 
 
 # keep variables required to calculate original's power
