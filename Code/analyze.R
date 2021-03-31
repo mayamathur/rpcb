@@ -190,7 +190,7 @@ modVars = c("expAnimal",
             # "reqPlasmids",
             "materialsShared",
             "responseQuality",
-            "changesNeeded")
+            "changes")
 
 CreateTableOne(vars = modVars, data = do)
 

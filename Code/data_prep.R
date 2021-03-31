@@ -169,8 +169,10 @@ d2 = d %>% rename( pID = "Paper #",
                    # has strings that can be used to determine type of lab:
                    labsContracted = "Lab(s) contracted for the experiment",
                    materialsOffered = "Key materials offered to be shared",
-                   materialsRequested = "Key materials asked to be shared",
+                   clarificationsAsked = "Clarifications asked of original authors",
+                   #materialsRequested = "Key materials asked to be shared",
                    responseQuality = "Quality of response from original authors",
+                   changesSuccess = "Changes able to be implemented during experimentation?",
                    # when this is NA, no mods were needed:
                    changesNeededProse = "If modifications were needed for experiment to proceed, what were they?")
 
@@ -211,6 +213,23 @@ d2$repDirection[ d2$repDirection == "" ] = NA
 
 # recode "changes needed" variable
 d2$changesNeeded = !is.na(d2$changesNeededProse)
+
+# recode "changes able to be implemented" variable
+#@ this has too many levels to work well as a moderator; for now am dichotomizing
+#  at >=3 (i.e., moderately implemented or better)
+d2$changes = NA
+d2$changes[ is.na(d2$changesSuccess) ] = "c. No changes needed"
+d2$changes[ d2$changesSuccess < 3 ] = "b. LT moderate success" # "LT" = "less than"
+d2$changes[ d2$changesSuccess >= 3 ] = "a. GTE moderate success"  # "GTE" = "greater than or equal"
+# sanity check
+table( d2$changes, d2$changesSuccess, useNA = "ifany")
+# sanity check for relationship with changesNeeded
+# @Tim: am I misunderstanding that the below should hold?
+expect_equal( d2$changesNeeded == FALSE, is.na(d2$changesSuccess) )  # not the same
+table( (d2$changesNeeded == FALSE) == is.na(d2$changesSuccess) )
+
+
+
 
 #@: no longer in use
 # # make dummies from variables coded as comma-separated categories
