@@ -41,7 +41,8 @@ library(here)
 # @@fix relative path problem:
 #set_here("~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology")
 # here()
-root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology/Code (git)"
+#root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology/Code (git)"
+root.dir = here()
 raw.data.dir = paste(root.dir, "Raw data", sep="/")
 prepped.data.dir = paste(root.dir, "Prepped data", sep="/")
 code.dir = paste(root.dir, "Code", sep="/")
