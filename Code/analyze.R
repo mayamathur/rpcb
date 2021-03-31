@@ -10,6 +10,11 @@
 
 rm(list=ls())
 
+# This script uses renv to preserve the R environment specs (e.g., package versions.)
+library(renv)
+# run this if you want to reproduce results using the R environment we had:
+# renv::restore()
+
 library(readxl)
 library(dplyr)
 library(ggplot2)
@@ -22,6 +27,11 @@ library(metafor)
 library(here)
 library(ggalt)
 library(tidyverse)
+library(here)
+
+
+# run this only if you want to update the R environment specs
+# renv::snapshot()
 
 # @@fix relative path problem:
 #set_here("~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology")
