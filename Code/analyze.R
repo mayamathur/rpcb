@@ -4,6 +4,11 @@
 #  - Then aggregates these at the experiment level to create an experiment-level datasets
 #  - Conducts remaining analyses at both levels of analysis (outcome, experiment)
 
+# Useful fns for interacting with this script (see helper.R):
+# - searchBook("p value")
+# - vr()
+# - wr()
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                     PRELIMINARIES                                 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -180,9 +185,10 @@ fwrite(cb2, "codebook_for_prepped_data.csv")
 modVars = c("expAnimal",
             "labType_b.Both",
             "labType_c.CRO.only",
-            "reqAntibodies",
-            "reqCells",
-            "reqPlasmids",
+            # "reqAntibodies",
+            # "reqCells",
+            # "reqPlasmids",
+            "materialsShared",
             "responseQuality",
             "changesNeeded")
 

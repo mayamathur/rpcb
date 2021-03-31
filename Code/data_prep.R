@@ -4,6 +4,10 @@
 #    may not be ideal (i.e., asymmetric), but that's because they're only an intermediate
 #    step toward approximating the final SE
 
+# Useful fns for interacting with this script (see helper.R):
+# - searchBook("p value")
+# - vr()
+# - wr()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                   PRELIMINARIES                                   #
@@ -164,6 +168,7 @@ d2 = d %>% rename( pID = "Paper #",
                    expType = "Type of experiment",
                    # has strings that can be used to determine type of lab:
                    labsContracted = "Lab(s) contracted for the experiment",
+                   materialsOffered = "Key materials offered to be shared",
                    materialsRequested = "Key materials asked to be shared",
                    responseQuality = "Quality of response from original authors",
                    # when this is NA, no mods were needed:
@@ -207,16 +212,23 @@ d2$repDirection[ d2$repDirection == "" ] = NA
 # recode "changes needed" variable
 d2$changesNeeded = !is.na(d2$changesNeededProse)
 
-#bm
-# make dummies from variables coded as comma-separated categories
-# @IMPORTANT: note that response quality coding exists even if no materials were requested
-table( is.na(d2$materialsRequested), d2$responseQuality )  
-d2 = recode_checkboxes(.d = d2,
-                       var = "materialsRequested")
-d2 = d2 %>% rename( "reqAntibodies"  = "Antibodies",
-                    "reqCells" = "Cells",
-                    "reqPlasmids" = "Plasmids" )
+#@: no longer in use
+# # make dummies from variables coded as comma-separated categories
+# # @IMPORTANT: note that response quality coding exists even if no materials were requested
+# table( is.na(d2$materialsRequested), d2$responseQuality )  
+# d2 = recode_checkboxes(.d = d2,
+#                        var = "materialsRequested")
+# d2 = d2 %>% rename( "reqAntibodies"  = "Antibodies",
+#                     "reqCells" = "Cells",
+#                     "reqPlasmids" = "Plasmids" )
 
+# were (any) materials actually shared?
+# regardless of whether they were requested
+d2$materialsShared = "c. Not requested"
+d2$materialsShared[ !is.na(d2$materialsOffered) & d2$materialsOffered == "No" ] = "a.No"
+d2$materialsShared[ !is.na(d2$materialsOffered) & d2$materialsOffered != "No" ] = "b.Yes"
+# sanity check
+table( d2$materialsOffered, d2$materialsShared, useNA = "ifany" )
 
 # recode lab type
 hasCRO = whichStrings( x = d2$labsContracted, pattern = "CRO" )
@@ -258,12 +270,13 @@ analysisVars = analysisVars[ !analysisVars %in% c("Notes, Organisms")]
 # @@maybe move this?
 # moderators
 modVars = c("expAnimal",
-              "labType",
-              "reqAntibodies",
-              "reqCells",
-              "reqPlasmids",
-              "responseQuality",
-              "changesNeeded")
+            "labType",
+            # "reqAntibodies",
+            # "reqCells",
+            # "reqPlasmids",
+            "materialsShared",
+            "responseQuality",
+            "changesNeeded")
 
 CreateTableOne( dat = d2 %>% select(analysisVars) %>%
                   select( -c("changesNeededProse", stringsWith("ID", names(d2) ) ) ) )
