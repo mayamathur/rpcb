@@ -198,6 +198,7 @@ d2$repDirection[ d2$repDirection == "" ] = NA
 # recode "changes needed" variable
 d2$changesNeeded = !is.na(d2$changesNeededProse)
 
+#bm
 # make dummies from variables coded as comma-separated categories
 # @IMPORTANT: note that response quality coding exists even if no materials were requested
 table( is.na(d2$materialsRequested), d2$responseQuality )  
