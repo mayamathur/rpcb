@@ -5,6 +5,7 @@
 
 
 # calculates pairwise metrics for one row of data (whether at outcome- or experiment-level)
+# see analyze.R for sanity checks
 analyze_one_row = function(origES3,
                            origVar3, 
                            repES3,
@@ -35,6 +36,7 @@ analyze_one_row = function(origES3,
                         pw.diffVar = NA,
                         
                         pw.PsigAgree1 = NA,
+                        pw.PsigAgree1.sens = NA,
                         
                         pw.FEest = NA,
                         pw.FEestVar = NA,
@@ -82,6 +84,13 @@ analyze_one_row = function(origES3,
                                  vio = origVar3,
                                  vir = repVar3,
                                  t2 = 0,
+                                 null = 0)
+  
+  # P(replication p < 0.05) - with heterogeneity
+  PsigAgree1.sens = prob_signif_agree(yio = origES3,
+                                 vio = origVar3,
+                                 vir = repVar3,
+                                 t2 = t2,
                                  null = 0)
   
   # Courtney's counterfactual version
@@ -161,6 +170,7 @@ analyze_one_row = function(origES3,
                       pw.diffVar = origVar3 + repVar3,
                       
                       pw.PsigAgree1 = PsigAgree1,
+                      pw.PsigAgree1.sens = PsigAgree1.sens,
                       
                       pw.FEest = as.numeric( FEmod$b ),
                       pw.FEestVar = as.numeric( FEmod$se^2 ),

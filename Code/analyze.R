@@ -186,8 +186,40 @@ denom = sqrt(vio + vir + c(t2.imp))
 Z = (abs(yio - yir))/denom
 pval = as.numeric(2 * (1 - pnorm(Z)))
 expect_equal( do$pw.PorigSens, pval )
-#bm
 
+# compare homo and hetero results
+mean(do$pw.PIRepInside, na.rm = TRUE); mean(do$pw.PIRepInside.sens, na.rm = TRUE)
+median(do$pw.Porig, na.rm=TRUE); median(do$pw.PorigSens, na.rm=TRUE)
+
+# check difference
+expect_equal( yio - yir, do$pw.diff )
+expect_equal( vio + vir, do$pw.diffVar )
+
+# check homogeneous PsigAgree (expected significance agreement)
+pooled.SE = sqrt( vio + vir )
+# because all yio>0:
+P = 1 - pnorm( ( qnorm(.975) * sqrt( vir ) - yio ) / pooled.SE )
+expect_equal( P,
+              do$pw.PsigAgree1 )
+
+# check heterogeneous PsigAgree (expected significance agreement)
+pooled.SE = sqrt( 2 * c(t2.imp) + vio + vir )
+# because all yio>0:
+P2 = 1 - pnorm( ( qnorm(.975) * sqrt( vir ) - yio ) / pooled.SE )
+expect_equal( P2,
+              do$pw.PsigAgree1.sens )
+
+# compare homo and hetero results
+# very close for this one
+mean(do$pw.PsigAgree1, na.rm = TRUE); mean(do$pw.PsigAgree1.sens, na.rm = TRUE)
+
+# check FEest
+expect_equal( (yio/vio + yir/vir) / (1/vio + 1/vir),
+              do$pw.FEest )
+expect_equal( 1 / (1/vio + 1/vir),
+              do$pw.FEestVar )
+
+#bm
 
 # MAKE CODEBOOK --------------------------------------------- 
 
@@ -226,7 +258,9 @@ update_codebook_row( "pw.PorigSens", c("num", "p-value for original inconsistenc
 update_codebook_row( "pw.ratio", c("num", "origES3 / repES3") )
 update_codebook_row( "pw.diff", c("num", "origES3 - repES3") )
 
-update_codebook_row( "pw.PsigAgree1", c("num", "Expected probability of significance agreement under null (Mathur & VanderWeele)") )
+update_codebook_row( "pw.PsigAgree1", c("num", "Expected probability of significance agreement under null, assuming no heterogeneity (Mathur & VanderWeele)") )
+
+update_codebook_row( "pw.PsigAgree1.sens", c("num", "Expected probability of significance agreement under null, with imputed heterogeneity (Mathur & VanderWeele)") )
 
 update_codebook_row( "pw.FEest", c("num", "Fixed-effects estimate pooling original and replication") )
 

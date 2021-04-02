@@ -1,7 +1,9 @@
 
 ## Notes on analysis dataset
 
-There is a [codebook](https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv) for the analysis dataset. Variables prefaced with "pw." are various pairwise metrics describing replication success.
+* There is a [codebook](https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv) for the analysis dataset. Variables prefaced with "pw." are various pairwise metrics describing replication success.
+
+* The dataset in "Auxiliary data" is from Olsson-Collentine's public repo and was used to impute the within-pair heterogeneity for sensitivity analyses.
 
 ## Notes on analysis methods
 
