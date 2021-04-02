@@ -260,7 +260,7 @@ analyze_moderators = function( .dat,
   # compare to model-based p-values
   #cbind(pvals, model$pval)
   
-  # @p-values with Satterthewaite correction to match conf_int above
+  # p-values with Satterthewaite correction to match conf_int above
   pvals = coef_test(model, vcov = "CR2")$p_Satt
   
   
@@ -750,6 +750,10 @@ robu2 = function(yi, vi) {
   }
   
   if ( nrow(dat) > 1 ) {
+    #@make sure to cite:
+    # #Tipton, E., & Pustejovsky, J. E. (2015). Small-sample adjustments for tests of moderators and model
+    # fit using robust variance estimation in meta-regression. _Journal of Educational and Behavioral
+    # Statistics, 40_(6), 604-634. doi: 10.3102/1076998615606099
     mod = robu( yi ~ 1,
                 var.eff.size = vi,
                 studynum = 1:length(yi),

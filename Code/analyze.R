@@ -366,6 +366,7 @@ for ( i in outcomesWithVar ) {
                                        
                                        modVars = modVars,
                                        
+                                       # here's where we control the number of tests counted in Bonferroni
                                        n.tests = length(modVars),
                                        digits = 2 )
   
@@ -408,16 +409,12 @@ resString = paste( round( model$b, 2 ),
                               2),
                    sep = "" )
 
-
+# check all stats for this outcome
 expect_equal( resString, modTable$Est[ modTable$Analysis == "diff" ] )
-
-
-# get robust variances
-# use club sandwich estimators throughout instead of plain sandwich
-#  to handle few clusters and/or wrong working model
-# same regardless of rma.mv vs. lmer
-
-
+expect_equal( as.character( round(pvals, 2) ), modTable$Pval[ modTable$Analysis == "diff" ] ) # Bonferroni p-values
+myBonf = pmin(1, pvals * length(modVars) )
+expect_equal( format_stat(myBonf, 2),
+              modTable$Pval.Bonf[ modTable$Analysis == "diff" ] ) 
 
 
 # Analyze Pairwise Metrics That *Don't* Have Variances --------------------------------------------- 
@@ -458,24 +455,43 @@ setwd(results.dir)
 setwd("Main tables")
 write.csv(modTable, "moderator_regressions_outcome_level.csv")
 
-# sanity check for one of the outcomes
 
+# ~~ Sanity check for one of the outcomes  --------------------------------------------- 
 formString = paste( "pw.Porig ~ ", paste( modVars, collapse= " + ") )
 formString2 = paste( formString, " + (1 | pID / eID)" )
 
+temp = do[ , c("pID", "eID", "pw.Porig", modVars ) ]
+temp = temp[ complete.cases(temp), ]
+
 model = lmer( eval( parse(text=formString2) ),
-              data = do %>% filter( !is.na(pw.Porig)) )
-
-t2 = NA
-
-}
+              data = temp )
 
 # get robust variances
-# use club sandwich estimators throughout instead of plain sandwich
-#  to handle few clusters and/or wrong working model
-# same regardless of rma.mv vs. lmer
 res = conf_int(model, vcov = "CR2")
 
+
+
+# robust inference
+res = conf_int(model, vcov = "CR2")
+pvals = coef_test(model, vcov = "CR2")$p_Satt
+
+resString = paste( round( fixef(model), 2 ), 
+                   " ",
+                   format_CI( res$CI_L, 
+                              res$CI_U,
+                              2),
+                   sep = "" )
+
+# check all stats for this outcome
+expect_equal( resString, modTable$Est[ modTable$Analysis == "Porig" ] )
+# this one is a PITA because of sci notation:
+# expect_equal( as.character( round(pvals, 2) ),
+#               modTable$Pval[ modTable$Analysis == "Porig" ] )
+# Bonferroni p-values
+myBonf = pmin(1, pvals * length(modVars) )
+expect_equal( format_stat(myBonf, 2),
+              modTable$Pval.Bonf[ modTable$Analysis == "Porig" ] ) 
+#bm
 
 
 
