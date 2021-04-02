@@ -8,7 +8,9 @@
 analyze_one_row = function(origES3,
                            origVar3, 
                            repES3,
-                           repVar3){
+                           repVar3,
+                           # heterogeneity value to impute in sens analyses
+                           t2){
   
   
   # note: need to keep these variables matching with those in the eventual return
@@ -55,13 +57,13 @@ analyze_one_row = function(origES3,
                   t2 = 0 )
   
   # for sensitivity analyses:
-  # prediction interval and Porig with tau = 0.13 (from Olssen-Collentine)
+  # prediction interval and Porig with tau from Olssen-Collentine
   # makes sense only for ES3, not ES2, so that we're using SMDs
   Porig.sens = p_orig( yio = origES3,
                        vio = origVar3,
                        yr = repES3,
                        vyr = repVar3,
-                       t2 = sqrt(.13) )
+                       t2 = t2 )
   
   # prediction interval
   # as in Replicate::pred_int, but adding in t2 here:
@@ -69,7 +71,7 @@ analyze_one_row = function(origES3,
   vio = origVar3
   yir = repES3
   vir = repVar3
-  pooled.SE = sqrt(vio + vir + .13)
+  pooled.SE = sqrt(vio + vir + t2)
   PILo.sens = yio - qnorm(0.975) * pooled.SE
   PIHi.sens = yio + qnorm(0.975) * pooled.SE
   PIinside.sens = (yir > PILo.sens) & (yir < PIHi.sens)
@@ -139,7 +141,7 @@ analyze_one_row = function(origES3,
   # })
   
   
-  #return as dataframe for mutate joys
+  #return as dataframe for mutate joy
   # "pw" prefix for "pairwise" metrics
   return( data.frame( pw.PILo = predInt$int.lo,
                       pw.PIHi = predInt$int.hi,

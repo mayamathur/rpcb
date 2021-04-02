@@ -9,9 +9,8 @@
 # - vr()
 # - wr()
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                                     PRELIMINARIES                                 #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+# PRELIMINARIES ---------------------------------------------
 
 rm(list=ls())
 
@@ -22,27 +21,27 @@ renv::restore()
 
 
 # run this only if you want to update the R environment specs:
-# library(readxl)
-# library(dplyr)
-# library(ggplot2)
-# library(MetaUtility)
-# library(robumeta)
-# library(testthat)
-# library(Replicate)
-# library(data.table)
-# library(metafor)
-# library(here)
-# library(ggalt)
-# library(tidyverse)
-# library(here)
-# renv::snapshot()
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(MetaUtility)
+library(robumeta)
+library(testthat)
+library(Replicate)
+library(data.table)
+library(metafor)
+library(here)
+library(ggalt)
+library(tidyverse)
+library(here)
+renv::snapshot()
 
 # define working directories
 root.dir = here()
 raw.data.dir = here("Raw data")
-prepped.data.dir = paste(root.dir, "Prepped data", sep="/")
-code.dir = paste(root.dir, "Code", sep="/")
-results.dir = paste(root.dir, "Results from R", sep="/")
+prepped.data.dir = here("Prepped data")
+code.dir = here("Code")
+results.dir = here("Results from R")
 
 # no sci notation
 options(scipen=999)
@@ -50,10 +49,11 @@ options(scipen=999)
 # for plots
 colors = c("red", "black")
 
+# source helper fns
 setwd(code.dir)
 source("helper.R")
 
-
+# read in prepped data
 setwd(prepped.data.dir)
 do = fread("prepped_outcome_level_data.csv")
 
@@ -61,21 +61,56 @@ do = fread("prepped_outcome_level_data.csv")
 setwd(raw.data.dir)
 cd = fread("codebook_merged.csv")
 
+# Olsson-Collentine data for sensitivity analyses with imputed heterogeneity
+# we got this dataset by running their publicly available R code
+setwd( here("Auxiliary data") )
+dOlsson = fread("het_df_from_their_code.csv")
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#               WORK ON OUTCOME-LEVEL DATA: CALCULATE PAIRWISE METRICS              #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-################################ CALCULATE PAIRWISE METRICS ################################ 
+# WORK ON OUTCOME-LEVEL DATA: CALCULATE PAIRWISE METRICS ---------------------------------------------
 
-# all the pw.XXX metrics are calculating using the ES3's (i.e., SMDs)
+# ~ Estimate average heterogeneity in Olsson-Collentine for use in sensitivity analyses
+
+
+# sanity check
+# reported heterogeneity medians: 0.047 for correlations and 0.09 for SMDs
+dOlsson %>% group_by(effect_type) %>%
+  summarise(median(tau),
+            mean( abs(eff_size) ),
+            # how big is tau as a ratio vs. the effect size magnitude?
+            tauRatio = median(tau / abs(eff_size) ) )
+# medians match :)
+
+# variance of tau so I can meta-analyze them
+dOlsson$tauSE = ( dOlsson$tau_ci.ub - dOlsson$tau ) / qnorm(.975)
+dOlsson$tauVar = dOlsson$tauSE^2
+# sanity check
+expect_equal( dOlsson$tau[1] + qnorm(.975)*dOlsson$tauSE[1],
+              dOlsson$tau_ci.ub[1] )
+
+# average heterogeneity across metas for SMDs only
+( m.SMD = robu( tau ~ 1,
+                var.eff.size = tauSE^2,
+                studynum = rp,
+                data = dOlsson[ dOlsson$effect_type == "SMD", ],
+                model = "HIER",
+                small = TRUE ) )
+
+# heterogeneity value to use in imputed analyses
+( t2.imp = m.SMD$mod_info$tau.sq )
+
+
+# ~ Calculate pairwise metrics ---------------------------------------------
+
+# all the "pw.XXX" metrics are calculating using the ES3's (i.e., SMDs)
 # retain non-quant pairs since we will also create plots and metrics for those below
 do = do %>% 
   rowwise() %>% 
   mutate( analyze_one_row(origES3,
                           origVar3, 
                           repES3,
-                          repVar3) )
+                          repVar3,
+                          t2 = t2.imp) )
 
 # # ratio sanity checks:fexptable
 
@@ -110,8 +145,51 @@ do = do %>%
 setwd(prepped.data.dir)
 fwrite(do, "prepped_outcome_level_data_pw_metrics.csv")
 
+# ~~ Sanity checks for analyze_one_row ---------------------------------------------
 
-################################ MAKE CODEBOOK ################################ 
+# check homogeneous prediction interval
+yio = do$origES3
+vio = do$origVar3
+yir = do$repES3
+vir = do$repVar3
+pooled.SE = sqrt(vio + vir)
+
+# check which entries should be NA
+expect_equal( is.na(yio) | is.na(vio) | is.na(yir) | is.na(vir),
+              is.na(do$pw.PIRepInside) )
+
+expect_equal( yio - qnorm(0.975) * pooled.SE,
+              do$pw.PILo)
+expect_equal( yio + qnorm(0.975) * pooled.SE,
+              do$pw.PIHi)
+expect_equal( yir >= do$pw.PILo & yir <= do$pw.PIHi,
+              do$pw.PIRepInside)
+
+# check heterogeneous prediction interval
+pooled.SE = sqrt(vio + vir + c(t2.imp))
+
+expect_equal( yio - qnorm(0.975) * pooled.SE,
+              do$pw.PILo.sens)
+expect_equal( yio + qnorm(0.975) * pooled.SE,
+              do$pw.PIHi.sens)
+expect_equal( yir >= do$pw.PILo.sens & yir <= do$pw.PIHi.sens,
+              do$pw.PIRepInside.sens)
+
+# check homogeneous Porig
+denom = sqrt(vio + vir)
+Z = (abs(yio - yir))/denom
+pval = as.numeric(2 * (1 - pnorm(Z)))
+expect_equal( do$pw.Porig, pval )
+
+# check hetero Porig
+denom = sqrt(vio + vir + c(t2.imp))
+Z = (abs(yio - yir))/denom
+pval = as.numeric(2 * (1 - pnorm(Z)))
+expect_equal( do$pw.PorigSens, pval )
+#bm
+
+
+# MAKE CODEBOOK --------------------------------------------- 
 
 # this includes only the new variables added to outcome-level data
 newVars = names(do)[104: length(names(do))]
