@@ -361,7 +361,8 @@ outcomesWithoutVar = c("pw.ratio",
                        "pw.PIRepInside.sens",
                        "pw.Porig",
                        "pw.PorigSens",
-                       "pw.PsigAgree1")
+                       "pw.PsigAgree1",
+                       "pw.PsigAgree1.sens")
 
 #if ( exists("modTable") ) rm(modTable)
 
@@ -430,7 +431,8 @@ de = do %>%
              # overall proportion (within this experiment) expected to agree
              # @@insert actual sig agreement
              pw.SigAgree = 100* mean(repSignif == origSignif & repDirection == origDirection),
-             pw.PercSigAgree1 = 100 * mean(pw.PsigAgree1)
+             pw.PercSigAgree1 = 100 * mean(pw.PsigAgree1),
+             pw.PercSigAgree1.sens = 100 * mean(pw.PsigAgree1.sens)
   ) 
 
 View(de)
@@ -465,7 +467,8 @@ expTable = do %>%
              # overall proportion (within this experiment) expected to agree
              # @@insert actual sig agreement
              SigAgree = n_perc_string( repSignif == origSignif & repDirection == origDirection),
-             PercSigAgree1 = paste( round( 100 * mean(pw.PsigAgree1), 0 ), "%", sep ="" )
+             PercSigAgree1 = paste( round( 100 * mean(pw.PsigAgree1), 0 ), "%", sep ="" ),
+             PercSigAgree1.sens = paste( round( 100 * mean(pw.PsigAgree1.sens), 0 ), "%", sep ="" )
   ) 
 
 View(expTable)
@@ -562,6 +565,9 @@ for ( l in analysisLevels ) {
   
   update_result_csv( name = "Mean PsigAgree1 outcome_level",
                      value = round( mean(dat$pw.PsigAgree1, na.rm = TRUE), 2 ) )
+  
+  update_result_csv( name = "Mean PsigAgree1.sens outcome_level",
+                     value = round( mean(dat$pw.PsigAgree1.sens, na.rm = TRUE), 2 ) )
   
   
   ################# RPP-STYLE SCATTERPLOT ################
