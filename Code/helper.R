@@ -200,31 +200,6 @@ analyze_moderators = function( .dat,
                                digits = 2
 ) {
   
-  # @@maybe use MRM metrics???
-  
-  # ##### test only
-  # analysis.label = "FE"
-  # yi.name = "pw.FEest"
-  # vi.name = "pw.FEvar"
-  # 
-  # analysis.label = "Porig"
-  # yi.name = "pw.Porig"
-  # vi.name = NA
-  # 
-  # .dat = dat
-  # 
-  # modVars = c("responseQuality",
-  #               "reqAntibodies",
-  #               "reqCells",
-  #               "reqPlasmids",
-  #               "labType",
-  #               "expAnimal")
-  # # mod.continuous = FALSE,
-  # 
-  # n.tests=length(moderators)
-  # digits = 2
-  # ##### end test
-  
   .dat$Yi = .dat[[yi.name]]
   
   if ( !is.na(vi.name) ) .dat$Vi = .dat[[vi.name]]
@@ -235,25 +210,23 @@ analyze_moderators = function( .dat,
   .dat = .dat[ complete.cases(.dat), ]
   
   formString = paste( "Yi ~ ", paste( modVars, collapse= " + ") )
-  
-  # use club sandwich estimators throughout instead of plain sandwich
-  #  to handle few clusters and/or wrong working model
-  library(clubSandwich)
-  
-  
-  
+
+  # if dealing with an outcome that has a variance
   if ( !is.na(vi.name) ) {
     ##### Set Up Working Correlation Matrix #####
     # from Pustejovsky code "Analyze Tanner-Smith & Lipsey 2015 data.R"
     # CHE: multilevel random effects model with constant sampling correlation working model
+    # allows between- and within-study heterogeneity as well as correlated errors within clusters
+    # latter could reflect, e.g., shared control groups
+    # Eq. (3) in Pustejovsky & Tipton (2021)
     V_mat = impute_covariance_matrix(vi = .dat$Vi,
-                                     cluster = .dat$pID,  #@@ may need to change this?
-                                     r = 0.6)
+                                     cluster = .dat$pID, 
+                                     r = 0.6)  # just a working "guess"
     
     ##### Fit Random-Effects Model #####
-    # fit random effects working model in metafor
+    # fit random-effects working model in metafor
     # three-level model: https://stats.stackexchange.com/questions/116659/mixed-effects-meta-regression-with-nested-random-effects-in-metafor-vs-mixed-mod
-    # @@the random structure will be only two-level when doing exp-level 
+    # this provides the point estimates, but we will NOT use its SEs because they are parametric
     model = rma.mv( eval( parse(text=formString) ),
                     V = V_mat,
                     #V = Vi,  # if Vi = 1 throughout, makes it similar to lmer
@@ -264,12 +237,10 @@ analyze_moderators = function( .dat,
     t2 = sqrt(model$tau2)
   }
   
+  # if dealing with outcome that doesn't have a variance
   if ( is.na(vi.name) ) {
-    # above reports model-based (not robust) standard errors
-    
-    # sanity check: compare to lmer
+    ##### Fit Random-Effects Model #####
     #   model-based should match exactly IF variances all equal
-    library(lme4)
     formString2 = paste( formString, " + (1 | pID / eID)" )
     
     model = lmer( eval( parse(text=formString2) ),
@@ -279,17 +250,18 @@ analyze_moderators = function( .dat,
     
   }
   
-  # same regardless of rma.mv vs. lmer use:
-  # RVE standard errors
+  # get robust variances
+  # use club sandwich estimators throughout instead of plain sandwich
+  #  to handle few clusters and/or wrong working model
+  # same regardless of rma.mv vs. lmer
   res = conf_int(model, vcov = "CR2")
-  
+
   
   # compare to model-based p-values
   #cbind(pvals, model$pval)
   
-  # @@decide on t vs. z (keep consistent with conf_int above)
-  #pvals = 2 * pt( abs(res$beta) / res$SE, df = res$df, lower.tail = FALSE )
-  pvals = 2 * pnorm( abs(res$beta) / res$SE, lower.tail = FALSE )
+  # @p-values with Satterthewaite correction to match conf_int above
+  pvals = coef_test(model, vcov = "CR2")$p_Satt
   
   
   ##### Put Results in Dataframe #####
@@ -312,8 +284,7 @@ analyze_moderators = function( .dat,
                           Tau = tau.string )
   
   
-  
-  # this should be a global variable
+  # modTable should be a global variable
   if ( !exists("modTable") ){
     modTable = new.chunk
   } else {
@@ -327,7 +298,7 @@ analyze_moderators = function( .dat,
 
 
 
-# catches warnings and puts them in modTable as a column
+# catches warnings and puts the warnings in modTable as a column
 safe_analyze_moderators = function(...) {
   
   r = 
@@ -349,8 +320,6 @@ safe_analyze_moderators = function(...) {
       }
     )
   
-  #print(r$error_text)
-  #browser()
   modTable = r$value  # includes any past modTable
   # "rev" part is an ugly, hacky way to only overwrite "Problems" for the most recent analysis that we just ran
   modTable$Problems[ modTable$Analysis == rev(unique(modTable$Analysis))[1] ] = r$error_text

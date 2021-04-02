@@ -37,6 +37,7 @@ library(here)
 library(tableone)
 library(corrr)
 library(clubSandwich)
+library(lme4)
 renv::snapshot()
 
 # define working directories
@@ -332,7 +333,7 @@ setwd("Additional tables and figures")
 write.csv(corrs, "moderator_cormat.csv")
 
 
-# Analyze Pairwise Metrics That *Do* Have Variances --------------------------------------------- 
+# ~ Analyze Pairwise Metrics That *Do* Have Variances --------------------------------------------- 
 
 
 #@: meta-regression breaks because changes variable is too homogeneous
@@ -374,11 +375,52 @@ for ( i in outcomesWithVar ) {
 modTable
 table(modTable$Problems)
 
-#bm: add sanity checks for this
-#start by reading through the rma.mv call and seeing if it makes sense
+
+# ~~ Sanity check for one of the outcomes  --------------------------------------------- 
+formString = paste( "pw.diff ~ ", paste( modVars, collapse= " + ") )
+formString2 = paste( formString, " + (1 | pID / eID)" )
+
+temp = do[ , c("pID", "eID", "pw.diff", "pw.diffVar", modVars ) ]
+temp = temp[ complete.cases(temp), ]
+
+V_mat = impute_covariance_matrix(vi = temp$pw.diffVar,
+                                 cluster = temp$pID, 
+                                 r = 0.6)  # just a working "guess"
+
+model = rma.mv( eval( parse(text=formString2) ),
+                V = V_mat,
+                random = ~ 1 | pID / eID,
+                data = temp,
+                sparse = TRUE)
+
+# robust inference
+res = conf_int(model, vcov = "CR2")
+pvals = coef_test(model, vcov = "CR2")$p_Satt
+
+# visually compare model-based inference to robust inference
+# pretty similar
+model$pval; pvals
+
+resString = paste( round( model$b, 2 ), 
+                   " ",
+                   format_CI( res$CI_L, 
+                              res$CI_U,
+                              2),
+                   sep = "" )
 
 
-##### Analyze Pairwise Metrics That *Don't* Have Variances #####
+expect_equal( resString, modTable$Est[ modTable$Analysis == "diff" ] )
+
+
+# get robust variances
+# use club sandwich estimators throughout instead of plain sandwich
+#  to handle few clusters and/or wrong working model
+# same regardless of rma.mv vs. lmer
+
+
+
+
+# Analyze Pairwise Metrics That *Don't* Have Variances --------------------------------------------- 
 
 
 outcomesWithoutVar = c("pw.ratio",
@@ -415,6 +457,25 @@ table(modTable$Problems)
 setwd(results.dir)
 setwd("Main tables")
 write.csv(modTable, "moderator_regressions_outcome_level.csv")
+
+# sanity check for one of the outcomes
+
+formString = paste( "pw.Porig ~ ", paste( modVars, collapse= " + ") )
+formString2 = paste( formString, " + (1 | pID / eID)" )
+
+model = lmer( eval( parse(text=formString2) ),
+              data = do %>% filter( !is.na(pw.Porig)) )
+
+t2 = NA
+
+}
+
+# get robust variances
+# use club sandwich estimators throughout instead of plain sandwich
+#  to handle few clusters and/or wrong working model
+# same regardless of rma.mv vs. lmer
+res = conf_int(model, vcov = "CR2")
+
 
 
 
