@@ -18,32 +18,28 @@ rm(list=ls())
 # This script uses renv to preserve the R environment specs (e.g., package versions.)
 library(renv)
 # run this if you want to reproduce results using the R environment we had:
-# renv::restore()
-
-library(readxl)
-library(dplyr)
-library(ggplot2)
-library(MetaUtility)
-library(robumeta)
-library(testthat)
-library(Replicate)
-library(data.table)
-library(metafor)
-library(here)
-library(ggalt)
-library(tidyverse)
-library(here)
+renv::restore()
 
 
-# run this only if you want to update the R environment specs
+# run this only if you want to update the R environment specs:
+# library(readxl)
+# library(dplyr)
+# library(ggplot2)
+# library(MetaUtility)
+# library(robumeta)
+# library(testthat)
+# library(Replicate)
+# library(data.table)
+# library(metafor)
+# library(here)
+# library(ggalt)
+# library(tidyverse)
+# library(here)
 # renv::snapshot()
 
-# @@fix relative path problem:
-#set_here("~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology")
-# here()
-#root.dir = "~/Dropbox/Personal computer/Independent studies/2020/RPCB reproducibility cancer biology/Code (git)"
+# define working directories
 root.dir = here()
-raw.data.dir = paste(root.dir, "Raw data", sep="/")
+raw.data.dir = here("Raw data")
 prepped.data.dir = paste(root.dir, "Prepped data", sep="/")
 code.dir = paste(root.dir, "Code", sep="/")
 results.dir = paste(root.dir, "Results from R", sep="/")
