@@ -34,6 +34,9 @@ library(here)
 library(ggalt)
 library(tidyverse)
 library(here)
+library(tableone)
+library(corrr)
+library(clubSandwich)
 renv::snapshot()
 
 # define working directories
@@ -219,7 +222,6 @@ expect_equal( (yio/vio + yir/vir) / (1/vio + 1/vir),
 expect_equal( 1 / (1/vio + 1/vir),
               do$pw.FEestVar )
 
-#bm
 
 # MAKE CODEBOOK --------------------------------------------- 
 
@@ -269,7 +271,7 @@ update_codebook_row( "pw.FEest", c("num", "Fixed-effects estimate pooling origin
 setwd(prepped.data.dir)
 fwrite(cb2, "codebook_for_prepped_data.csv")
 
-################################ META-REGRESSION ################################ 
+# META-REGRESSION --------------------------------------------- 
 
 # moderators are at experiment-level, but analysis is at outcome level with 
 #  nesting to handle experiment-level and paper-level correlation structure
@@ -288,7 +290,7 @@ fwrite(cb2, "codebook_for_prepped_data.csv")
 
 
 
-##### Moderator Summary Table and Correlation Matrix #####
+# ~ Moderator Summary Table and Correlation Matrix --------------------------------------------- 
 
 modVars = c("expAnimal",
             "hasCROLab",
@@ -299,11 +301,20 @@ modVars = c("expAnimal",
 
 CreateTableOne(vars = modVars, data = do)
 
+#bm
+
 # moderator correlation matrix
-library(corrr)
+# for categorical mods, simplify by just looking at one level for the corr matrix
+modVarsBin = c("expAnimal",
+            "hasCROLab",
+            "hasCoreLab",
+            "materialsShared_b.Yes",
+            "infoQuality",
+            "changes_b..LT.moderate.success")
+
 corrs = do %>%
   filter(quantPair == TRUE) %>%
-  select(modVars) %>%
+  select(modVarsBin) %>%
   correlate( use = "pairwise.complete.obs" ) %>%
   stretch() %>%
   arrange(desc(r)) %>%
@@ -321,9 +332,20 @@ setwd("Additional tables and figures")
 write.csv(corrs, "moderator_cormat.csv")
 
 
-##### Analyze Pairwise Metrics That *Do* Have Variances #####
+# Analyze Pairwise Metrics That *Do* Have Variances --------------------------------------------- 
 
-# not surprisingly given its extreme values and variances, ratio doesn't really work here (V not positive definite)
+
+#@: meta-regression breaks because changes variable is too homogeneous
+# all but one are in the same category
+table(do$changes)
+#@ TEMPORARILY EXCLUDE THIS MODERATOR:
+modVars = c("expAnimal",
+            "hasCROLab",
+            "hasCoreLab",
+            "materialsShared",
+            "infoQuality")
+
+
 outcomesWithVar = c( "pw.diff",
                      "pw.FEest")
 
@@ -351,6 +373,9 @@ for ( i in outcomesWithVar ) {
 
 modTable
 table(modTable$Problems)
+
+#bm: add sanity checks for this
+#start by reading through the rma.mv call and seeing if it makes sense
 
 
 ##### Analyze Pairwise Metrics That *Don't* Have Variances #####

@@ -1,16 +1,18 @@
 variable,type,description
+Notes,,
 repSignif,bin,Was replication p<0.05?
 origSignif,bin,Was original p<0.05?
 changesNeeded,,
-reqAntibodies,,
-reqCells,,
-Organisms,,
-reqPlasmids,,
-labType,,
-labType_a.Core.only,,
-labType_b.Both,,
-labType_c.CRO.only,,
-labType_NA,,
+changes,,
+changes_a..GTE.moderate.success,,
+changes_b..LT.moderate.success,,
+changes_c..No.changes.needed,,
+materialsShared,,
+materialsShared_a.No,,
+materialsShared_b.Yes,,
+materialsShared_c..Not.requested,,
+hasCROLab,,
+hasCoreLab,,
 expAnimal,,
 quantPair,bin,Did we have quantitative ES for both original and replication?
 peoID,,
@@ -51,8 +53,9 @@ pw.ratio,num,origES3 / repES3
 pw.ratioVar,,
 pw.diff,num,origES3 - repES3
 pw.diffVar,,
-pw.PsigAgree1,num,Expected probability of significance agreement under null (Mathur & VanderWeele)
+pw.PsigAgree1,num,"Expected probability of significance agreement under null, assuming no heterogeneity (Mathur & VanderWeele)"
 pw.FEest,num,Fixed-effects estimate pooling original and replication
 pw.FEestVar,,
 pw.FElo,,
 pw.FEhi,,
+pw.PsigAgree1.sens,num,"Expected probability of significance agreement under null, with imputed heterogeneity (Mathur & VanderWeele)"
