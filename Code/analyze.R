@@ -302,8 +302,6 @@ modVars = c("expAnimal",
 
 CreateTableOne(vars = modVars, data = do)
 
-#bm
-
 # moderator correlation matrix
 # for categorical mods, simplify by just looking at one level for the corr matrix
 modVarsBin = c("expAnimal",
@@ -491,19 +489,18 @@ expect_equal( resString, modTable$Est[ modTable$Analysis == "Porig" ] )
 myBonf = pmin(1, pvals * length(modVars) )
 expect_equal( format_stat(myBonf, 2),
               modTable$Pval.Bonf[ modTable$Analysis == "Porig" ] ) 
-#bm
 
 
 
-################################ CREATE EXPT-LEVEL DATASET AND TABLE ################################ 
+# CREATE EXPT-LEVEL DATASET AND TABLE  --------------------------------------------- 
 
-# table of pairwise metrics aggregated sat the experiment level (~50 rows)
+# table of pairwise metrics aggregated at the experiment level (~50 rows)
 
 # look at the outcomes to be aggregated
-stringsWith( pattern = "pw", x = names(dat) )
+stringsWith( pattern = "pw", x = names(do) )
 
 
-##### Dataset #####
+# ~ Expt-level dataset
 
 # @@to do:
 # - aggregate origES3, etc., so we can make the difference plot
@@ -525,14 +522,14 @@ de = do %>%
              
              pw.PIRepInside = mean(pw.PIRepInside),
              pw.PIRepInside.sens = mean(pw.PIRepInside.sens), 
-             # @@note: better to suse p.hmp here becuase it's asymptotically exact,
+             # @@note: better to use p.hmp here becuase it's asymptotically exact,
              #  but it was giving error messages
              pw.Porig = harmonic_p(pw.Porig),
              pw.Porig.sens = harmonic_p(pw.PorigSens),
              
              # overall proportion (within this experiment) expected to agree
-             # @@insert actual sig agreement
-             pw.SigAgree = 100* mean(repSignif == origSignif & repDirection == origDirection),
+             pw.SigAgree = 100* mean(repSignif == origSignif &
+                                       repDirection == origDirection),
              pw.PercSigAgree1 = 100 * mean(pw.PsigAgree1),
              pw.PercSigAgree1.sens = 100 * mean(pw.PsigAgree1.sens)
   ) 
@@ -545,7 +542,7 @@ setwd(prepped.data.dir)
 fwrite(de, "prepped_exp_level_data_pw_metrics.csv")
 
 
-##### Table #####
+# ~ Expt-level table (prettified version of above)
 
 # table does NOT include non-quant pairs
 expTable = do %>%
@@ -553,15 +550,15 @@ expTable = do %>%
   group_by(peID) %>%
   summarise( nOutcomes = n(),
              
-             
-             origES3 = round( )
+             origES3 = round( mean(origES3, 2) ),
+             repES3 = round( mean(repES3), 2 ),
              
              FEest = round( mean(pw.FEest), 2 ),
              Ratio = round( mean(pw.ratio), 2 ),
              
              PIRepInside = n_perc_string(pw.PIRepInside),
              PIRepInside.sens = n_perc_string(pw.PIRepInside.sens), 
-             # @@note: better to suse p.hmp here becuase it's asymptotically exact,
+             # @@note: better to suse p.hmp here because it's asymptotically exact,
              #  but it was giving error messages
              Porig = format.pval( harmonic_p(pw.Porig), digits = 2, eps = "0.0001" ),
              Porig.sens = format.pval( harmonic_p( pw.PorigSens ), digits = 2, eps = "0.0001" ),
@@ -581,7 +578,8 @@ setwd("Main tables")
 fwrite(expTable, "pw_metrics_table_exp_level.csv")
 
 
-
+#bm: SANITY CHECKS STOPPED HERE :)
+# also will need to sanity-check data_prep.R
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #             AT MULTIPLE LEVELS OF ANALYSIS: SUMMARY PLOTS AND STATS               #
@@ -597,7 +595,7 @@ analysisLevels = c("exp_level", "outcome_level")
 
 for ( l in analysisLevels ) {
   
-  # test only
+  #@test only
   l = "outcome_level"
   
   if ( l == "outcome_level" ) dat = do
@@ -881,28 +879,6 @@ for ( l in analysisLevels ) {
   
   
 }  # end giant loop over analysis levels
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
