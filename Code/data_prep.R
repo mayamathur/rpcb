@@ -9,6 +9,9 @@
 # - vr()
 # - wr()
 
+# To do: 
+# - download updated codebook
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                   PRELIMINARIES                                   #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -18,22 +21,23 @@ rm(list=ls())
 # This script uses renv to preserve the R environment specs (e.g., package versions.)
 library(renv)
 # run this if you want to reproduce results using the R environment we had:
-# renv::restore()
+renv::restore()
+
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(MetaUtility)
+library(robumeta)
+library(testthat)
+library(data.table)
+library(tableone)
+library(qdapTools)
+library(metafor)
+library(fastDummies)
+library(here)
 
 # run this only if you want to update the R environment specs:
-# library(readxl)
-# library(dplyr)
-# library(ggplot2)
-# library(MetaUtility)
-# library(robumeta)
-# library(testthat)
-# library(data.table)
-# library(tableone)
-# library(qdapTools)
-# library(metafor)
-# library(fastDummies)
-# library(here)
-# renv::snapshot()
+#renv::snapshot()
 
 # define working directories
 root.dir = here()
@@ -54,9 +58,11 @@ run.sanity = FALSE
 # read in paper-, experiment-, and outcome-level data
 setwd(raw.data.dir)
 # we won't actually be using the first of these
-dp = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
-de = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
-do = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Outcome level data"); nrow(do)
+dp = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
+de = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
+#@Tim: with updated dataset, not sure which of the two outcome sheets to use
+do = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Transformed outcome level data"); nrow(do)
+
 
 ##### Sanity Checks on Hierarchical Data Structure #####
 # nesting levels: paper > experiment > outcome
@@ -181,6 +187,10 @@ d2 = d %>% rename( pID = "Paper #",
 write_interm(d2, "intermediate_dataset_step1.csv")
 
 
+#@
+which(d2$pID == 15 & d2$eID == 2 & d2$oID == 2) # not in dataset
+which(d2$pID == 20 & d2$eID == 1 & d2$oID == 1) # not in dataset
+
 ################################ 2. RECODE VARIABLES AND MAKE NEW ONES ################################ 
 
 
@@ -296,6 +306,8 @@ d2 = d2 %>% group_by(peoID) %>%
 # used for making the experiment-level data
 d2$peID = paste( "p", d2$pID, "e", d2$eID, sep = "" )
 
+#@which(d2$peoID == "p47e1o2")
+
 # look at the analysis variables
 # easy trick to find analysis variables: their names don't have spaces
 ( analysisVars = names(d2)[ !whichStrings("[.]", names(d2)) ] )
@@ -316,6 +328,29 @@ CreateTableOne( dat = d2 %>% select(analysisVars) %>%
 
 # save intermediate dataset for easy debugging
 write_interm(d2, "intermediate_dataset_step2.csv")
+
+
+#@look at the issue Tim raised about aggregation
+d2 %>% filter( pID == 47 & eID == 1 ) %>%
+  select( oID,
+          origDirection,
+          repDirection,
+          origES,
+          repES )
+
+do %>% filter(`Paper #` == 47 & `Experiment #` == 1) %>%
+  select( `Effect #`,
+          `Original effect size`,
+          `Replication effect size`,
+          `Effect size type` )
+#bm
+d2 %>% filter( peoID %in% c("p15e2o2", "p15e2o201", "p15e2o202") ) %>%
+  select( origDirection,
+          repDirection,
+          origES,
+          repES )
+
+which( d$`Paper #` == 47 & d$`Experiment #` == 1 & d$`Effect #` == 2 )
 
 
 ################################ 3. CALCULATE VARIOUS EFFECT SIZES (ES2 AND ES3) ################################ 
@@ -370,6 +405,7 @@ table(d2$ES2type)
 
 # @@COULD ASK TIM FOR THE ORIGINAL SES IF AVAILABLE; THIS IS A TEMPORARY Z APPROXIMATION:
 # 1.96 * SE * 2 = full CI width
+#@TIM GAVE ME THE SES, SO USE THOSE
 d2$origSE2 = ( d2$origESHi2 - d2$origESLo2 ) / ( 2 * qnorm(.975) )
 d2$repSE2 = ( d2$repESHi2 - d2$repESLo2 ) / ( 2 * qnorm(.975) )
 
