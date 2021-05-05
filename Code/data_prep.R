@@ -58,13 +58,10 @@ run.sanity = FALSE
 # read in paper-, experiment-, and outcome-level data
 setwd(raw.data.dir)
 # we won't actually be using the first of these
-dp = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
-de = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
-#@Tim: with updated dataset, not sure which of the two outcome sheets to use
-# Tim confirmed that this is the post-SMD conversions
-# F-tests for interactions were split into 2 main effects to get SMDs
-# currently changed in the ID itself (over 100)
-do = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Transformed outcome level data"); nrow(do)
+dp = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
+de = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
+#@ when using new dataset, use "Transformed outcome data" tab (post-SMD conversions)
+do = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Outcome level data"); nrow(do)
 
 
 ##### Sanity Checks on Hierarchical Data Structure #####
