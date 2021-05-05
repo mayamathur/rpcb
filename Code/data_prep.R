@@ -324,34 +324,34 @@ modVars = c("expAnimal",
             "changes")
 
 CreateTableOne( dat = d2 %>% select(analysisVars) %>%
-                  select( -c("changesNeededProse", stringsWith("ID", names(d2) ) ) ) )
+                  select( -c("changesNeededRaw", stringsWith("ID", names(d2) ) ) ) )
 
 
 # save intermediate dataset for easy debugging
 write_interm(d2, "intermediate_dataset_step2.csv")
 
 
-#@look at the issue Tim raised about aggregation
-d2 %>% filter( pID == 47 & eID == 1 ) %>%
-  select( oID,
-          origDirection,
-          repDirection,
-          origES,
-          repES )
-
-do %>% filter(`Paper #` == 47 & `Experiment #` == 1) %>%
-  select( `Effect #`,
-          `Original effect size`,
-          `Replication effect size`,
-          `Effect size type` )
-#bm
-d2 %>% filter( peoID %in% c("p15e2o2", "p15e2o201", "p15e2o202") ) %>%
-  select( origDirection,
-          repDirection,
-          origES,
-          repES )
-
-which( d$`Paper #` == 47 & d$`Experiment #` == 1 & d$`Effect #` == 2 )
+# #@look at the issue Tim raised about aggregation
+# d2 %>% filter( pID == 47 & eID == 1 ) %>%
+#   select( oID,
+#           origDirection,
+#           repDirection,
+#           origES,
+#           repES )
+# 
+# do %>% filter(`Paper #` == 47 & `Experiment #` == 1) %>%
+#   select( `Effect #`,
+#           `Original effect size`,
+#           `Replication effect size`,
+#           `Effect size type` )
+# #bm
+# d2 %>% filter( peoID %in% c("p15e2o2", "p15e2o201", "p15e2o202") ) %>%
+#   select( origDirection,
+#           repDirection,
+#           origES,
+#           repES )
+# 
+# which( d$`Paper #` == 47 & d$`Experiment #` == 1 & d$`Effect #` == 2 )
 
 
 ################################ 3. CALCULATE VARIOUS EFFECT SIZES (ES2 AND ES3) ################################ 
@@ -406,7 +406,8 @@ table(d2$ES2type)
 
 # @@COULD ASK TIM FOR THE ORIGINAL SES IF AVAILABLE; THIS IS A TEMPORARY Z APPROXIMATION:
 # 1.96 * SE * 2 = full CI width
-#@TIM GAVE ME THE SES, SO USE THOSE
+#@TIM GAVE ME THE SES, SO USE THOSE FOR ONLY THE SMD MEASURES
+# REMEMBER THAT THE OTHER MEASURES (E.G., HRS) HAVE UNTRANSFORMED SMDS, SO SHOULD NOT USE THOSE
 d2$origSE2 = ( d2$origESHi2 - d2$origESLo2 ) / ( 2 * qnorm(.975) )
 d2$repSE2 = ( d2$repESHi2 - d2$repESLo2 ) / ( 2 * qnorm(.975) )
 
