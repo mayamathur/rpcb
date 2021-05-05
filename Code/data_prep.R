@@ -61,6 +61,9 @@ setwd(raw.data.dir)
 dp = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
 de = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
 #@Tim: with updated dataset, not sure which of the two outcome sheets to use
+# Tim confirmed that this is the post-SMD conversions
+# F-tests for interactions were split into 2 main effects to get SMDs
+# currently changed in the ID itself (over 100)
 do = read_xlsx("2021_5_1_raw_data.xlsx", sheet = "Transformed outcome level data"); nrow(do)
 
 
@@ -180,7 +183,10 @@ d2 = d %>% rename( pID = "Paper #",
                    #materialsRequested = "Key materials asked to be shared",
                    infoQuality = "Quality of response from original authors",
                    changesSuccess = "Changes able to be implemented during experimentation?",
-                   # when this is NA, no mods were needed:
+                   
+                   #@NEED TO USE `Changes needed during experimentation?` instead
+                   # when it's 0 (*not* NA), that means no changes needed
+                   # should always correspond to 6 in "Changes able to be implemented"
                    changesNeededProse = "If modifications were needed for experiment to proceed, what were they?")
 
 # save intermediate dataset for easy debugging
@@ -223,6 +229,7 @@ d2$origDirection[ d2$origDirection == "" ] = NA
 d2$repDirection[ d2$repDirection == "" ] = NA
 
 
+#@WRONG! 
 d2$changesNeeded = !is.na(d2$changesNeededProse)
 
 # recode "changes able to be implemented" variable
