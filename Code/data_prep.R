@@ -180,19 +180,12 @@ d2 = d %>% rename( pID = "Paper #",
                    #materialsRequested = "Key materials asked to be shared",
                    infoQuality = "Quality of response from original authors",
                    changesSuccess = "Changes able to be implemented during experimentation?",
-                   
-                   #@NEED TO USE `Changes needed during experimentation?` instead
-                   # when it's 0 (*not* NA), that means no changes needed
-                   # should always correspond to 6 in "Changes able to be implemented"
-                   changesNeededProse = "If modifications were needed for experiment to proceed, what were they?")
+                   changesNeededRaw = "Changes needed during experimentation?")
 
 # save intermediate dataset for easy debugging
 write_interm(d2, "intermediate_dataset_step1.csv")
 
 
-#@
-which(d2$pID == 15 & d2$eID == 2 & d2$oID == 2) # not in dataset
-which(d2$pID == 20 & d2$eID == 1 & d2$oID == 1) # not in dataset
 
 ################################ 2. RECODE VARIABLES AND MAKE NEW ONES ################################ 
 
@@ -226,23 +219,27 @@ d2$origDirection[ d2$origDirection == "" ] = NA
 d2$repDirection[ d2$repDirection == "" ] = NA
 
 
-#@WRONG! 
-d2$changesNeeded = !is.na(d2$changesNeededProse)
 
-# recode "changes able to be implemented" variable
-# changesSuccess is basically the temporal successor to changesNeeded
-#@ this has too many levels to work well as a moderator; for now am dichotomizing
+#@NEED TO USE `Changes needed during experimentation?` instead
+# when it's 0 (*not* NA), that means no changes needed
+# should always correspond to 6 in "Changes able to be implemented"
+
+# - recode "changes able to be implemented" variable
+# - changesSuccess (formerly `Changes able to be implemented`) is basically the temporal successor to
+#  changesNeededRaw (formerly `Changes needed during experimentation?`)
+# - this has too many levels to work well as a moderator, so we are dichotomizing
 #  at >=3 (i.e., moderately implemented or better)
+# - changesNeededRaw (formerly `Changes needed during experimentation?`) is coded st 
+#  0 (*not* NA) means no changes were needed 
+# - and changesNeededRaw = 0 should always correspond to changesSuccess = 6 ("not needed")
+expect_equal( d2$changesNeededRaw == 0, d2$changesSuccess == 6)
+
 d2$changes = NA
 d2$changes[ is.na(d2$changesSuccess) ] = "c. No changes needed"
 d2$changes[ d2$changesSuccess < 3 ] = "b. LT moderate success" # "LT" = "less than"
 d2$changes[ d2$changesSuccess >= 3 ] = "a. GTE moderate success"  # "GTE" = "greater than or equal"
 # sanity check on recoding
 table( d2$changes, d2$changesSuccess, useNA = "ifany")
-# sanity check: if no changes needed, change quality should be NA
-# @Tim: am I misunderstanding that the below should hold?
-expect_equal( d2$changesNeeded == FALSE, is.na(d2$changesSuccess) )  # not the same
-table( (d2$changesNeeded == FALSE) == is.na(d2$changesSuccess) )
 # dummy-coded version of changes
 # only used for making the moderator correlation matrix
 d2 = dummy_cols(.data = d2, select_columns = "changes")
