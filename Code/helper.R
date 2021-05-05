@@ -628,15 +628,138 @@ cohen_d = function( x2, y ) {
 
 # aggregation fns: 
 # plain mean (ratio)
-# count and percent (repinside, PsigAGree)
+# count and percent (repinside, PsigAgree)
 # FE analysis (origES2, repES2, FEest)
 # harmonic mean p-value (porig)
 n_perc_string = function(x, digits = 0) {
   if ( all( is.na(x) ) ) return("All missing")
   x = x[!is.na(x)]
   paste( sum(x), " (", round( 100 * mean(x), digits ), "%)", sep = "" )
+  
+  
 }
 # n_perc_string( c(0,0,0,0,1,1,1,0,0) )
+
+
+# STOLEN FROM SAPB-E
+# construct string with sample mean and its CI
+# by default, use cluster-robust inference
+# also works for binary variables (linear prob model)
+# return.n: should it return the ANALYZED sample size (i.e., non-missing on x or cluster var)?
+mean_CI = function(x,
+                   cluster = NA,
+                   robust = TRUE,
+                   return.n = FALSE,
+                   return.df = FALSE) {
+  
+  if (all(is.na(x))) return("")
+  
+  if(robust == TRUE & length(x) != length(cluster)) browser()
+  
+  
+  if (robust == TRUE) {
+    # remove missing data
+    keep = !is.na(x) & !is.na(cluster)
+    x = x[keep==TRUE]
+    cluster = cluster[keep==TRUE]
+    
+    if(length(x) != length(cluster)) browser()
+    
+    # OLS (= linear prob model if binary)
+    library(clubSandwich)
+    mod = lm(x ~ 1) 
+    Vmat = vcovCR(mod,
+                  cluster = cluster,
+                  type = "CR2")
+    CIs = conf_int(mod, vcov = Vmat)
+    
+    tryCatch({
+      
+      if ( return.n == FALSE ) {
+        
+        if ( return.df == FALSE ) {
+          return( paste( format_stat( mean(x) ),
+                         format_CI( CIs$CI_L, CIs$CI_U ) ) )
+        } else {
+          return( data.frame( est = format_stat( mean(x) ),
+                              lo = format_stat(CIs$CI_L),
+                              hi = format_stat(CIs$CI_U) ) )
+        }
+        
+        
+      }
+      
+      if ( return.n == TRUE ) {
+        
+        if ( return.df == FALSE ) {
+          return( paste( format_stat( mean(x) ),
+                         format_CI( CIs$CI_L, CIs$CI_U ),
+                         ", n =",
+                         length(x),
+                         sep = " " ) )
+        } else {
+          return( data.frame( est = format_stat( mean(x) ),
+                              lo = format_stat(CIs$CI_L),
+                              hi = format_stat(CIs$CI_U),
+                              n = length(x) ) )
+        }
+        
+        
+      }
+      
+    }, error = function(err) {
+      browser()
+    })
+    
+    # return( paste( format_stat( mean(x) ),
+    #                format_CI( CIs$CI_L, CIs$CI_U ) ) )
+  }
+  
+  if (robust == FALSE) {
+    x = x[!is.na(x)]
+    xbar = mean(x)
+    lims = as.numeric( t.test(x)$conf.int )
+    
+    if ( return.n == FALSE ) {
+      
+      if ( return.df == FALSE ) {
+        return( paste( format_stat( mean(x) ),
+                       format_CI( lims[1], lims[2] ) ) )
+      }
+      
+      if (return.df == TRUE) {
+        return( data.frame( est = format_stat( mean(x) ),
+                            lo = format_stat(lims[1]),
+                            hi = format_stat(lims[2]) ) )
+      }
+      
+      
+      
+    } else {
+      
+      if ( return.df == FALSE ) {
+        return( paste( format_stat( mean(x) ),
+                       format_CI( lims[1], lims[2] ),
+                       ", n =",
+                       length(x),
+                       sep = " " ) )
+      }
+      
+      if ( return.df == TRUE ) {
+        return( data.frame( est = format_stat( mean(x) ),
+                            lo = format_stat(lims[1]),
+                            hi = format_stat(lims[2]),
+                            n = length(x) ) )
+      }
+      
+    }
+    
+    
+  }
+}
+
+
+
 
 
 harmonic_p = function(x) {

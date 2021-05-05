@@ -20,7 +20,6 @@ library(renv)
 renv::restore()
 
 
-# run this only if you want to update the R environment specs:
 library(readxl)
 library(dplyr)
 library(ggplot2)
@@ -38,7 +37,9 @@ library(tableone)
 library(corrr)
 library(clubSandwich)
 library(lme4)
-renv::snapshot()
+
+# run this only if you want to update the R environment specs:
+# renv::snapshot()
 
 # define working directories
 root.dir = here()
@@ -271,6 +272,8 @@ update_codebook_row( "pw.FEest", c("num", "Fixed-effects estimate pooling origin
 # save it
 setwd(prepped.data.dir)
 fwrite(cb2, "codebook_for_prepped_data.csv")
+
+
 
 # META-REGRESSION --------------------------------------------- 
 
@@ -578,15 +581,17 @@ setwd("Main tables")
 fwrite(expTable, "pw_metrics_table_exp_level.csv")
 
 
-#bm: SANITY CHECKS STOPPED HERE :)
+#@SANITY CHECKS STOPPED HERE :)
 # also will need to sanity-check data_prep.R
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#             AT MULTIPLE LEVELS OF ANALYSIS: SUMMARY PLOTS AND STATS               #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# AT MULTIPLE LEVELS OF ANALYSIS: SUMMARY PLOTS AND STATS -----------------
 
+# read back in
+setwd(prepped.data.dir)
+de = fread("prepped_exp_level_data_pw_metrics.csv")
+do = fread("prepped_outcome_level_data_pw_metrics.csv")
 
-# bm: All of this is working for the outcome-level data.
+#@: All of this is working for the outcome-level data.
 #  If we want to run all of this at experiment level as well,
 #  will need to add some things to its creation (see notes above when making de dataset)
 
@@ -606,7 +611,7 @@ for ( l in analysisLevels ) {
   
   # Percent sign agreement: The percentage of replications whose estimates agree in direction with the original study. This could be heuristically compared to the 50% that would be expected by chance if the null holds exactly in every replication (i.e., no effect heterogeneity) and conditional on all originals’ being positive in sign.
   
-  
+  #@ Is "l" still in use?
   if ( l == "outcome_level" ) {
 
     update_result_csv( name = "n all pairs outcome_level",
@@ -623,31 +628,43 @@ for ( l in analysisLevels ) {
     
   }
   
-  update_result_csv( name = "n (perc) pw.PIRepInside outcome_level",
-                     value = n_perc_string(dat$pw.PIRepInside == TRUE) )
+  update_result_csv( name = "prop pw.PIRepInside outcome_level",
+                     value = mean_CI(dat$pw.PIRepInside == TRUE,
+                                              cluster = dat$pID) )
   
-  update_result_csv( name = "n (perc) pw.PIRepInside.sens outcome_level",
-                     value = n_perc_string(dat$pw.PIRepInside.sens == TRUE) )
+  update_result_csv( name = "prop pw.PIRepInside.sens outcome_level",
+                     value = mean_CI(dat$pw.PIRepInside.sens == TRUE,
+                                     cluster = dat$pID) )
   
   update_result_csv( name = "Median Porig outcome_level",
                      value = round( median(dat$pw.Porig, na.rm = TRUE), 3 ) )
   
-  update_result_csv( name = "n (perc) Porig<0.005 outcome_level",
-                     value = n_perc_string(dat$pw.Porig < 0.005 ) )
+  #bm
+  update_result_csv( name = "Harmonic mean Porig outcome_level",
+                     value = round( harmonic_p(dat$pw.Porig), 4 ) )
   
-  update_result_csv( name = "n (perc) Porig<0.05 outcome_level",
-                     value = n_perc_string(dat$pw.Porig < 0.05 ) )
+  update_result_csv( name = "prop Porig<0.005 outcome_level",
+                     value = mean_CI(dat$pw.Porig < 0.005,
+                                     cluster = dat$pID) )
+  
+  update_result_csv( name = "prop Porig<0.05 outcome_level",
+                     value = mean_CI(dat$pw.Porig < 0.05,
+                                     cluster = dat$pID) )
   
   
   update_result_csv( name = "Median PorigSens outcome_level",
                      value = round( median(dat$pw.PorigSens, na.rm = TRUE), 3 ) )
   
-  update_result_csv( name = "n (perc) PorigSens<0.005 outcome_level",
-                     value = n_perc_string(dat$pw.PorigSens < 0.005 ) )
+  update_result_csv( name = "prop PorigSens<0.005 outcome_level",
+                     value = mean_CI(dat$pw.PorigSens < 0.005,
+                                     cluster = dat$pID) )
   
-  update_result_csv( name = "n (perc) PorigSens<0.05 outcome_level",
-                     value = n_perc_string(dat$pw.PorigSens < 0.05 ) )
+  update_result_csv( name = "prop PorigSens<0.05 outcome_level",
+                     value = mean_CI(dat$pw.PorigSens < 0.05,
+                                     cluster = dat$pID) )
   
+  
+  #bm
   update_result_csv( name = "Median SMD ratio outcome_level",
                      value = round( median(dat$pw.ratio, na.rm = TRUE), 2 ) )
   
@@ -662,6 +679,15 @@ for ( l in analysisLevels ) {
   
   update_result_csv( name = "Median SMD repES3 outcome_level",
                      value = round( median(dat$repES3, na.rm = TRUE), 2 ) )
+  
+  
+  # significance agreement
+  #bm
+  
+  update_result_csv( name = "prop sigAgree outcome_level",
+                     value = mean_CI( dat$repSignif == dat$origSignif &
+                                        dat$repDirection == dat$origDirection,
+                                      cluster = dat$pID ) )
   
   update_result_csv( name = "Mean PsigAgree1 outcome_level",
                      value = round( mean(dat$pw.PsigAgree1, na.rm = TRUE), 2 ) )

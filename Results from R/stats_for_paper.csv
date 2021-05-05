@@ -8,7 +8,7 @@ n (perc) pw.PIRepInside.sens outcome_level,63 (65%),NA
 Median Porig outcome_level,0.065,NA
 n (perc) Porig<0.005 outcome_level,14 (14%),NA
 n (perc) Porig<0.05 outcome_level,41 (42%),NA
-Median PorigSens outcome_level,0.087,NA
+Median PorigSens outcome_level,0.083,NA
 n (perc) PorigSens<0.005 outcome_level,12 (12%),NA
 n (perc) PorigSens<0.05 outcome_level,34 (35%),NA
 Median SMD ratio outcome_level,2.8,NA
@@ -18,3 +18,18 @@ Mean PsigAgree1 outcome_level,0.87,NA
 Median SMD origES3 outcome_level,3,NA
 Median SMD repES3 outcome_level,0.57,NA
 Mean PsigAgree1.sens outcome_level,0.85,NA
+Harmonic mean Porig outcome_level,0.0005,NA
+prop pw.PIRepInside outcome_level,0.58 [0.43, 0.73]
+NA,,
+prop pw.PIRepInside.sens outcome_level,0.65 [0.50, 0.80]
+NA,,
+prop Porig<0.05 outcome_level,0.42 [0.27, 0.57]
+NA,,
+prop Porig<0.005 outcome_level,0.14 [0.05, 0.24]
+NA,,
+prop PorigSens<0.005 outcome_level,0.12 [0.02, 0.23]
+NA,,
+prop PorigSens<0.05 outcome_level,0.37 [0.22, 0.52]
+NA,,
+prop sigAgree outcome_level,0.33 [0.17, 0.48]
+NA,,
