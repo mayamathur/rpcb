@@ -4,6 +4,10 @@
 #    may not be ideal (i.e., asymmetric), but that's because they're only an intermediate
 #    step toward approximating the final SE
 
+
+# And correct you should be using the "Effect size type (SMD)" for what you are doing (i.e., using all the (SMD) associated variables). And correct that it's not all on an SMD scale (because as you said that's what you are converting to where necessary). It's to enable you to do the conversion (which isn't possible for as many if you used the "Effect size type" variables). I had previously broken this out in the two sheets, so hopefully pushing together isn't causing confusion. I'll also tweak the data dictionary to make this clearer - in many ways it's an "SMD conversion possible effect size" - or something like that.
+
+
 # Useful fns for interacting with this script (see helper.R):
 # - searchBook("p value")
 # - vr()
@@ -286,9 +290,9 @@ d2$hasCoreLab = whichStrings( x = d2$labsContracted, pattern = "Core" )
 d2$expAnimal = (d2$expType == "Animal")
 
 # indicator for being a completed quantitative pair
-# should be 138 per Tim
+# should be 132 per Tim
 d2$quantPair = !is.na(d2$origES) & !is.na(d2$repES)
-expect_equal( sum(d2$quantPair), 138 )
+expect_equal( sum(d2$quantPair), 132 )
 
 # ID for paper-exp-outcome combos
 d2$peoID = paste( "p", d2$pID, "e", d2$eID, "o", d2$oID, sep = "")
