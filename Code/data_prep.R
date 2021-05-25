@@ -9,8 +9,6 @@
 # - vr()
 # - wr()
 
-# To do: 
-# - download updated codebook
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                   PRELIMINARIES                                   #
@@ -58,10 +56,9 @@ run.sanity = FALSE
 # read in paper-, experiment-, and outcome-level data
 setwd(raw.data.dir)
 # we won't actually be using the first of these
-dp = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
-de = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
-#@ when using new dataset, use "Transformed outcome data" tab (post-SMD conversions)
-do = read_xlsx("2020_11_30_raw_data.xlsx", sheet = "Outcome level data"); nrow(do)
+dp = read_xlsx("2021_5_25_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
+de = read_xlsx("2021_5_25_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
+do = read_xlsx("2021_5_25_raw_data.xlsx", sheet = "Raw outcome level data"); nrow(do)
 
 
 ##### Sanity Checks on Hierarchical Data Structure #####
@@ -115,12 +112,12 @@ nrow(d)
 
 ##### Merge Codebooks for Easy Searching #####
 
-# # this only had to be done once
+# # this only has to be done when the codebooks are updated
 # setwd(raw.data.dir)
 # for ( i in c("Paper level data dictionary",
 #              "Experiment level data dictionar",  # Excel cuts off last char
 #              "Outcome level data dictionary") ){
-#   cdNew = read_xlsx("2020_11_30_raw_data.xlsx", sheet = i)
+#   cdNew = read_xlsx("2021_5_25_raw_data.xlsx", sheet = i)
 #   cdNew$dataset = i
 #   if ( i == "Paper level data dictionary" ) cd = cdNew else cd = rbind(cd, cdNew)
 # }
@@ -144,7 +141,7 @@ d2 = d %>% rename( pID = "Paper #",
                    testReported = "Was a statistical test reported in the original paper?.x",
                    
                    origDirection = "Expected difference based on the original paper?",
-                   repDirection = "Observed difference in replication?",
+                   repDirection = "Observed difference in replication? (SMD)",
                    
                    origN = "Original sample size",
                    repN = "Replication sample size",
@@ -152,24 +149,26 @@ d2 = d %>% rename( pID = "Paper #",
                    # point estimates that were sometimes available even when 
                    #  couldn't calculate effect sizes
                    origRawDiff = "Original point difference (for representative data)",
-                   repRawDiff = "Replication raw difference (if original reported representative data)",
+                   repRawDiff = "Replication raw difference (if original reported representative data) (SMD)",
                    
                    # main effect sizes for us, but not yet on same scale
-                   origES = "Original effect size",
-                   origESLo = "Original lower CI",
-                   origESHi = "Original upper CI",
-                   origdf1 = "Original df1",
-                   origdf2 = "Original df2",
-                   origPval = "Original p value",
+                   origES = "Original effect size (SMD)",
+                   origESLo = "Original lower CI (SMD)",
+                   origESHi = "Original upper CI (SMD)",
+                   origdf1 = "Original df1 (SMD)",
+                   origdf2 = "Original df2 (SMD)",
+                   origPval = "Original p value (SMD)",
+                   origSE = "Original standard error (SMD)",
                    
-                   repES = "Replication effect size",
-                   repESLo = "Replication lower CI",
-                   repESHi = "Replication upper CI",
-                   repdf1 = "Replication df1",
-                   repdf2 = "Replication df2",
-                   repPval = "Replication p value",
+                   repES = "Replication effect size (SMD)",
+                   repESLo = "Replication lower CI (SMD)",
+                   repESHi = "Replication upper CI (SMD)",
+                   repdf1 = "Replication df1 (SMD)",
+                   repdf2 = "Replication df2 (SMD)",
+                   repPval = "Replication p value (SMD)",
+                   repSE = "Replication standard error (SMD)",
                    
-                   EStype = "Effect size type",
+                   EStype = "Effect size type (SMD)",
                    
                    # raw moderators
                    expType = "Type of experiment",
@@ -204,7 +203,6 @@ analysisVars = analysisVars[ !analysisVars %in% c("Notes.x", "Notes.y")]
 d2 = d2 %>% mutate_at( .vars = makeNumeric, .funs = as.numeric )
 # warning is okay
 
-# @@ need to move for exp-level
 # repDirection is about both direction and significance
 # split it up
 d2$repSignif = d2$repPval < 0.05
@@ -218,11 +216,6 @@ table(d2$origSignif, d2$origDirection)
 d2$origDirection[ d2$origDirection == "" ] = NA
 d2$repDirection[ d2$repDirection == "" ] = NA
 
-
-
-#@NEED TO USE `Changes needed during experimentation?` instead
-# when it's 0 (*not* NA), that means no changes needed
-# should always correspond to 6 in "Changes able to be implemented"
 
 # - recode "changes able to be implemented" variable
 # - changesSuccess (formerly `Changes able to be implemented`) is basically the temporal successor to
@@ -307,14 +300,12 @@ d2 = d2 %>% group_by(peoID) %>%
 # used for making the experiment-level data
 d2$peID = paste( "p", d2$pID, "e", d2$eID, sep = "" )
 
-#@which(d2$peoID == "p47e1o2")
 
 # look at the analysis variables
 # easy trick to find analysis variables: their names don't have spaces
 ( analysisVars = names(d2)[ !whichStrings("[.]", names(d2)) ] )
 analysisVars = analysisVars[ !analysisVars %in% c("Notes, Organisms")]
 
-# @@maybe move this?
 # moderators
 modVars = c("expAnimal",
             "hasCROLab",
@@ -331,28 +322,6 @@ CreateTableOne( dat = d2 %>% select(analysisVars) %>%
 write_interm(d2, "intermediate_dataset_step2.csv")
 
 
-# #@look at the issue Tim raised about aggregation
-# d2 %>% filter( pID == 47 & eID == 1 ) %>%
-#   select( oID,
-#           origDirection,
-#           repDirection,
-#           origES,
-#           repES )
-# 
-# do %>% filter(`Paper #` == 47 & `Experiment #` == 1) %>%
-#   select( `Effect #`,
-#           `Original effect size`,
-#           `Replication effect size`,
-#           `Effect size type` )
-# #bm
-# d2 %>% filter( peoID %in% c("p15e2o2", "p15e2o201", "p15e2o202") ) %>%
-#   select( origDirection,
-#           repDirection,
-#           origES,
-#           repES )
-# 
-# which( d$`Paper #` == 47 & d$`Experiment #` == 1 & d$`Effect #` == 2 )
-
 
 ################################ 3. CALCULATE VARIOUS EFFECT SIZES (ES2 AND ES3) ################################ 
 
@@ -363,6 +332,7 @@ d2 = read_interm("intermediate_dataset_step2.csv")
 
 # breakdown of ES types
 # sanity check:
+#@UPDATE THIS AFTER CHECKING WITH TIM AGAIN
 # Tim said "For awareness, we are at 90 Cohen's d, 15 Cohen's dz, 20 Glass' delta, 6 Pearson's r, and 7 Hazard ratios for effects where there are quantitative pairs (this is counting them as unique paper/experiment/effect/internal replication, so naturally this goes down as they are collapsed on any of those elements for analysis/visualization)."
 # that totals 138
 d2 %>% filter( quantPair == TRUE ) %>%
@@ -371,8 +341,13 @@ d2 %>% filter( quantPair == TRUE ) %>%
 # matches :)
 
 # look at which statistical tests yielded which effect size types
-t = d2 %>% group_by(EStype, Statistical.test.applied.to.original.data) %>%
+t = d2 %>% group_by(EStype, Statistical.test.applied.to.original.data..SMD.) %>%
   summarise(n())
+t
+
+#@CHECKING WITH TIM ABOUT WHETHER THESE ARE ACTUALLY SMDS:
+d$`Original effect size`[ d$`Effect size type` == "Pearson's r"]
+d$`Original effect size (SMD)`[ d$`Effect size type` == "Pearson's r"]
 
 
 ##### ES2: Converted to a scale that can be meta-analyzed, but NOT necessarily SMDs #####

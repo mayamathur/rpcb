@@ -848,7 +848,7 @@ whichStrings = function(pattern, x){
 # returns rows of coddebook that have pattern anywhere in current variable name
 #  or description
 searchBook = function(pattern){
-  rows = whichStrings( tolower(pattern), tolower(cd$`Current variable name`) ) |
+  rows = whichStrings( tolower(pattern), tolower(cd$`Variable name`) ) |
     whichStrings( tolower(pattern), tolower(cd$`Description of variable`) )
   View(cd[ rows, ])
 }
