@@ -345,7 +345,7 @@ t = d2 %>% group_by(EStype, Statistical.test.applied.to.original.data..SMD.) %>%
   summarise(n())
 t
 
-#@CHECKING WITH TIM ABOUT WHETHER THESE ARE ACTUALLY SMDS:
+#@CHECKING WITH TIM ABOUT WHETHER THESE KINDS OF THINGS ARE ACTUALLY SMDS:
 d$`Original effect size`[ d$`Effect size type` == "Pearson's r"]
 d$`Original effect size (SMD)`[ d$`Effect size type` == "Pearson's r"]
 
@@ -379,12 +379,16 @@ table(d2$ES2type)
 
 ##### Standard errors #####
 
-# @@COULD ASK TIM FOR THE ORIGINAL SES IF AVAILABLE; THIS IS A TEMPORARY Z APPROXIMATION:
+# by default, use a simple Z approximation for the SEs
 # 1.96 * SE * 2 = full CI width
-#@TIM GAVE ME THE SES, SO USE THOSE FOR ONLY THE SMD MEASURES
-# REMEMBER THAT THE OTHER MEASURES (E.G., HRS) HAVE UNTRANSFORMED SMDS, SO SHOULD NOT USE THOSE
 d2$origSE2 = ( d2$origESHi2 - d2$origESLo2 ) / ( 2 * qnorm(.975) )
 d2$repSE2 = ( d2$repESHi2 - d2$repESLo2 ) / ( 2 * qnorm(.975) )
+# but for effect sizes that were directly calculated as SMDs (i.e., not 
+#  converted from some other scale), we can use the "native" SEs directly:
+ind = d2$EStype %in% c("Cohen's d",
+                       "Cohen's dz",
+                       "Glass' delta" ) 
+d2$origSE2[ind] = d2$origSE[ind]
 
 d2$origVar2 = d2$origSE2^2
 d2$repVar2 = d2$repSE2^2
@@ -470,9 +474,9 @@ d2$repVar3 = d2$repSE3^2
 ind = which( d2$EStype == "Pearson's r" )
 # CI limits
 mySMD = r_to_d(r = d2$origES[ind],
-                 sx = 1,
-                 delta = 1,
-                 N = d2$origN[ind] )
+               sx = 1,
+               delta = 1,
+               N = d2$origN[ind] )
 # SEs are pretty similar
 cbind( sqrt(d2$origVar3[ind]), mySMD$se )
 # the CIs themselves are different because of aforementioned asymmetry, which makes sense
@@ -511,7 +515,7 @@ temp = d2 %>% select( peoID, EStype, origES, origESLo, origESHi, origES3, origES
   arrange( desc(EStype, discrep) )
 
 temp = temp %>% mutate_at( names(temp)[ !names(temp) %in% c("peoID", "EStype")],
-                    function(x) round(x,2) )
+                           function(x) round(x,2) )
 
 # and for replications
 temp = d2 %>% select( peoID, EStype, repES, repESLo, repESHi, repES3, repESLo3, repESHi3, discrep ) %>%
