@@ -483,32 +483,14 @@ cbind( sqrt(d2$origVar3[ind]), mySMD$se )
 # the CIs themselves are different because of aforementioned asymmetry, which makes sense
 cbind( d2$origESLo3[ind], mySMD$lo )
 
-
-
+# discrepancies between CI limits and SEs
 # will be close but not necessarily exactly equal in the case of highly asymmetric CIs
 d2$discrep = abs((d2$origES3 + qnorm(.975) * d2$origSE3) - d2$origESHi3)
 summary(d2$discrep)
 
-ind = which( (d2$origES3 + qnorm(.975) * d2$origSE3) - d2$origESHi3 > 1.38 )
-d2$origES3[ind]; d2$origESLo3[ind]; d2$origESHi3[ind]
-# bm
-# huh??
-d2$origES[ind]; d2$origESLo[ind]; d2$origESHi[ind]
-d2$EStype[ind]
-d2$peoID[ind]
-
-# check original dataset
-temp = d %>% filter( `Paper #` == 28 & `Experiment #` == 2 & `Effect #` == 1 )
-temp$`Original effect size`
-temp$`Original lower CI`
-temp$`Original upper CI`
-# this was an issue even in the original dataset
-
 d2$badCI = ( d2$origES > d2$origESHi ) |  ( d2$origES < d2$origESLo )
-table( d2$badCI )
-# just this one
-# Paper 28, experiment 2, effect 1
-# @ask Tim
+expect_equal( TRUE %in% d2$badCI, FALSE )
+
 
 # look at the initial and fully converted estimates and CI limits
 temp = d2 %>% select( peoID, EStype, origES, origESLo, origESHi, origES3, origESLo3, origESHi3, discrep ) %>%
@@ -756,9 +738,6 @@ nrow(d3)
 # first level of granularity: outcome-level
 setwd(prepped.data.dir)
 fwrite(d3, "prepped_outcome_level_data.csv")
-
-# second level of granularity: experiment-level
-# @@not done yet
 
 
 

@@ -288,10 +288,6 @@ fwrite(cb2, "codebook_for_prepped_data.csv")
 # What was requested from original authors and the response? (scored subjectively; Likert scale)
 # Was a post hoc modification to protocol needed to complete the experiment? (col W in experiment level)
 
-#@@Might be problematic (think about):
-# N of original
-# ES of original
-
 
 
 # ~ Moderator Summary Table and Correlation Matrix --------------------------------------------- 
@@ -429,8 +425,6 @@ outcomesWithoutVar = c("pw.ratio",
                        "pw.PsigAgree1",
                        "pw.PsigAgree1.sens")
 
-#if ( exists("modTable") ) rm(modTable)
-
 for ( i in outcomesWithoutVar ) {
   modTable = safe_analyze_moderators(  .dat = do[ do$quantPair == TRUE, ],
                                        yi.name = i,
@@ -542,10 +536,10 @@ View(de)
 
 # save it
 setwd(prepped.data.dir)
-fwrite(de, "prepped_exp_level_data_pw_metrics.csv")
+fwrite(de, "prepped_exp_level_data_pw_metrics.csv") 
 
 
-# ~ Expt-level table (prettified version of above)
+# ~ Expt-level table (prettified version of above) -----------------
 
 # table does NOT include non-quant pairs
 expTable = do %>%
