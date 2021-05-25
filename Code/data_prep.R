@@ -452,7 +452,8 @@ expect_equal( d2$origESLo3[ind], mySMDLo )
 
 
 ##### Calculate standard errors #####
-# @@important: we got these by transforming CI limits,
+# Important: For effect sizes that were extracted on a non-SMD
+#  scale and then converted, we got SEs by transforming CI limits,
 #  then using z approximation to back out the variance
 #  when origES had a highly asymmetric CI, so will origES3
 #   because we just transformed the CI limits
