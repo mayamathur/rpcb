@@ -116,33 +116,6 @@ do = do %>%
                           repES3,
                           repVar3,
                           t2 = t2.imp) )
- 
-# # ratio sanity checks:fexptable
-# # @@note that some ratios and their variances are extremely large:
-# inds = which(do$pw.ratioVar > 100000)
-# do$pw.ratio[inds]
-# 
-# i = 5
-# origES2 = do$origES2[i]
-# origVar2 = do$origVar2[i]
-# repES2 = do$repES2[i]
-# repVar2 = do$repVar2[i]
-# 
-# deltamethod( ~ x1/x2,
-#              mean = c( origES2, repES2 ), cov = diag( c(origVar2, repVar2) ) )^2
-# 
-# 
-# for ( i in 1:nrow(do) ) {
-#   # debug any rows that are brats
-#   chunk = analyze_one_row( do$origES2[i],
-#                    do$origVar2[i],
-#                    do$repES2[i],
-#                    do$repVar2[i],
-#                    do$ES2type[i])
-#   if ( i == 1 ) res = chunk
-#   if ( i > 1) res = rbind(res, chunk)
-# 
-# }
 
 
 # save it
@@ -487,7 +460,7 @@ expect_equal( format_stat(myBonf, 2),
 
 
 
-# CREATE EXPT-LEVEL DATASET AND TABLE  --------------------------------------------- 
+# CREATE EXPT-LEVEL DATASET AND TABLE --------------------------------------------- 
 
 # table of pairwise metrics aggregated at the experiment level (~50 rows)
 
@@ -495,14 +468,7 @@ expect_equal( format_stat(myBonf, 2),
 stringsWith( pattern = "pw", x = names(do) )
 
 
-# ~ Expt-level dataset
-
-# @@to do:
-# - aggregate origES3, etc., so we can make the difference plot
-# # FE meta-analysis of original and replications
-# FEmod = rma.uni( yi = c(origES3, repES3),
-#                  vi = c(origVar3, repVar3),
-#                  method = "FE")
+# ~ Expt-level dataset --------------------------------------------- 
 
 # entries are numerical and not rounded for plotting, analysis, etc.
 # this DOES include the non-quant pairs for plotting purposes
@@ -517,7 +483,7 @@ de = do %>%
              
              pw.PIRepInside = mean(pw.PIRepInside),
              pw.PIRepInside.sens = mean(pw.PIRepInside.sens), 
-             # @@note: better to use p.hmp here becuase it's asymptotically exact,
+             # note: would have preferred p.hmp here because it's asymptotically exact,
              #  but it was giving error messages
              pw.Porig = harmonic_p(pw.Porig),
              pw.Porig.sens = harmonic_p(pw.PorigSens),
@@ -553,13 +519,11 @@ expTable = do %>%
              
              PIRepInside = n_perc_string(pw.PIRepInside),
              PIRepInside.sens = n_perc_string(pw.PIRepInside.sens), 
-             # @@note: better to suse p.hmp here because it's asymptotically exact,
-             #  but it was giving error messages
+            
              Porig = format.pval( harmonic_p(pw.Porig), digits = 2, eps = "0.0001" ),
              Porig.sens = format.pval( harmonic_p( pw.PorigSens ), digits = 2, eps = "0.0001" ),
              
              # overall proportion (within this experiment) expected to agree
-             # @@insert actual sig agreement
              SigAgree = n_perc_string( repSignif == origSignif & repDirection == origDirection),
              PercSigAgree1 = paste( round( 100 * mean(pw.PsigAgree1), 0 ), "%", sep ="" ),
              PercSigAgree1.sens = paste( round( 100 * mean(pw.PsigAgree1.sens), 0 ), "%", sep ="" )
