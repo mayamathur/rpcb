@@ -93,47 +93,6 @@ analyze_one_row = function(origES3,
                                  t2 = t2,
                                  null = 0)
   
-  # Courtney's counterfactual version
-  # @@CALCULATING POWER IS GOING TO BE A PROBLEM UNLESS WE CAN DO IT FOR ONLY 2-GROUP DESIGNS
-  #  AND MAYBE CORRELATIONS
-  # # P(replication p < 0.05) in counterfactual world in which the true 
-  # #  effect size in replication and original is equal to the effect size for which it would
-  # #  have had 80% power
-  # # i.e., this is just the power to detect that effect size given replication's variance
-  # power.t.test( )
-  # 
-  # # the df are only approximate
-  # # @@ could use 
-  # if ( !is.na(origN) ) {
-  #   df = origN - 2
-  #   tcrit = qt(0.975, df = df)
-  # } else {
-  #   stop("Found a case with origN NA, so should use 1.96 here, I guess (also need to impute df)")
-  # }
-  # 
-  # # mu: the true effect
-  # # we will solve for it
-  # pwr_at_mu = function(mu){
-  #   pt( q = tcrit - mu / sqrt(origVar3),
-  #       df = df,
-  #       lower.tail = FALSE ) +
-  #     pt( q = -tcrit - mu / sqrt(origVar3),
-  #         df = df,
-  #         lower.tail = TRUE )
-  # }
-  # 
-  # # sanity check
-  # expect_equal( 0.05, pwr_at_mu(0) )
-  # 
-  # 
-  # pwr_at_mu(15)
-  # power.t.test( n = origN,
-  #               delta = 15,
-  #               sd = sqrt(origVar3) * sqrt(origN) )$power
-  # 
-  # # solve for counterfactual mu
-  # mu.cfactual = uniroot( function(.mu) eval( pwr_cfactual(.mu) ) = 0.80 )
-  
   # FE meta-analysis of original and replications
   FEmod = rma.uni( yi = c(origES3, repES3),
                    vi = c(origVar3, repVar3),
