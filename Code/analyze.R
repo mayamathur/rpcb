@@ -1,7 +1,7 @@
 
 # High-level summary of this script:
 #  - Calculates pairwise metrics at the outcome level
-#  - Then aggregates these at the experiment level to create an experiment-level datasets
+#  - Then aggregates these at the experiment level to create an experiment-level dataset
 #  - Conducts remaining analyses at both levels of analysis (outcome, experiment)
 
 # Useful fns for interacting with this script (see helper.R):
