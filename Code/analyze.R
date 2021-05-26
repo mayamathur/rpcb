@@ -116,7 +116,7 @@ do = do %>%
                           repES3,
                           repVar3,
                           t2 = t2.imp) )
-
+ 
 # # ratio sanity checks:fexptable
 # # @@note that some ratios and their variances are extremely large:
 # inds = which(do$pw.ratioVar > 100000)
