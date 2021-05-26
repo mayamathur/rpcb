@@ -1,4 +1,7 @@
 
+# NOTES ---------------------------------------------
+
+
 # High-level summary of this script:
 #  - Calculates pairwise metrics at the outcome level
 #  - Then aggregates these at the experiment level to create an experiment-level dataset

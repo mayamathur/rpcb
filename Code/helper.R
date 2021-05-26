@@ -100,14 +100,10 @@ analyze_one_row = function(origES3,
   
   # pw.ratioVar = NA
   # # use delta method to approximate variance of ratio
-  # tryCatch({
   library(msm)
   pw.ratioVar = deltamethod( ~ x1/x2,
                              mean = c( origES3, repES3 ), cov = diag( c(origVar3, repVar3) ) )^2
-  # }, error = function(err){
-  #   browser()
-  # })
-  
+
   
   #return as dataframe for mutate joy
   # "pw" prefix for "pairwise" metrics
@@ -365,7 +361,6 @@ convert_to_ES3 = function(x,
   
   # convert Fisher's z via Mathur & VanderWeele (2020)
   # since SDs are unknown, define contrast of interest as 1 SD change in X
-  # @@mention this in Supplement
   ind = !is.na(.ES2type) & .ES2type == "Fisher's z" 
 
   x2[ind] = r_to_d( z_to_r( x[ind] ), 
@@ -376,7 +371,6 @@ convert_to_ES3 = function(x,
 }
 
 
-# @@MM:update this fn in MetaUtility because this is more general
 # Pearson's r to Fisher's z
 # NOT the Z-score
 # handles NAs
@@ -388,8 +382,6 @@ r_to_z_NA = function(r){
 # r_to_z_NA( c(.22, -.9, NA) )
 
 
-
-# @@MM: also put this in MetaUtility
 # logHR to logOR by way of logRR
 # if rare, it's easy because HR \approx RR
 # if common, use TVW's two conversions
@@ -533,7 +525,6 @@ logOR_to_SMD = function(logOR,
 
 
 
-# ALSO PUT IN METAUTILITY
 # calculates variance (Z- or t-based) given CI limit and point estimate
 # ci.lim can be upper or lower
 # if df not provided, assumes we're using Z
@@ -831,10 +822,7 @@ robu2 = function(yi, vi) {
   }
   
   if ( nrow(dat) > 1 ) {
-    #@make sure to cite:
-    # #Tipton, E., & Pustejovsky, J. E. (2015). Small-sample adjustments for tests of moderators and model
-    # fit using robust variance estimation in meta-regression. _Journal of Educational and Behavioral
-    # Statistics, 40_(6), 604-634. doi: 10.3102/1076998615606099
+    # fit using robust variance estimation in meta-regression
     mod = robu( yi ~ 1,
                 var.eff.size = vi,
                 studynum = 1:length(yi),
