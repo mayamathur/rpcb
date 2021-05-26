@@ -118,7 +118,6 @@ do = do %>%
                           t2 = t2.imp) )
 
 # # ratio sanity checks:fexptable
-
 # # @@note that some ratios and their variances are extremely large:
 # inds = which(do$pw.ratioVar > 100000)
 # do$pw.ratio[inds]
@@ -332,11 +331,10 @@ write.csv(corrs, "moderator_cormat.csv")
 
 # ~ Analyze Pairwise Metrics That *Do* Have Variances --------------------------------------------- 
 
-
-#@: meta-regression breaks because changes variable is too homogeneous
-# all but one are in the same category
+# exclude changes variable from meta-regression because it's too homogeneous
+#  (all but one outcome are in the same category)
+#  so it breaks the meta-regression
 table(do$changes)
-#@ TEMPORARILY EXCLUDE THIS MODERATOR:
 modVars = c("expAnimal",
             "hasCROLab",
             "hasCoreLab",
@@ -575,7 +573,6 @@ setwd("Main tables")
 fwrite(expTable, "pw_metrics_table_exp_level.csv")
 
 
-#@SANITY CHECKS STOPPED HERE :)
 
 # AT MULTIPLE LEVELS OF ANALYSIS: SUMMARY PLOTS AND STATS -----------------
 
@@ -587,6 +584,7 @@ do = fread("prepped_outcome_level_data_pw_metrics.csv")
 #@: All of this is working for the outcome-level data.
 #  If we want to run all of this at experiment level as well,
 #  will need to add some things to its creation (see notes above when making de dataset)
+#@: Could eliminate the extra levels here because I don't think we're going to use them. 
 
 analysisLevels = c("exp_level", "outcome_level")
 
@@ -604,7 +602,7 @@ for ( l in analysisLevels ) {
   
   # Percent sign agreement: The percentage of replications whose estimates agree in direction with the original study. This could be heuristically compared to the 50% that would be expected by chance if the null holds exactly in every replication (i.e., no effect heterogeneity) and conditional on all originals’ being positive in sign.
   
-  #@ Is "l" still in use?
+  #@ can remove after removing the additional analysis levels
   if ( l == "outcome_level" ) {
 
     # ~~ Counts ------------------
@@ -620,6 +618,16 @@ for ( l in analysisLevels ) {
     update_result_csv( name = "n (perc) same direction all pairs outcome_level",
                        value = n_perc_string(dat$repDirection == "Positive") )
     
+    # sanity check on n_perc_string
+    myString = paste( sum(dat$repDirection == "Positive"), 
+                      " (",
+                      round( 100 * mean(dat$repDirection == "Positive") ),
+                      "%)", 
+                      sep = "")
+    expect_equal( myString,
+                  n_perc_string(dat$repDirection == "Positive") )
+    # end sanity check
+    
   }
   
   # ~~ Prediction intervals ------------------
@@ -633,6 +641,28 @@ for ( l in analysisLevels ) {
   
   update_result_csv( name = "Median Porig outcome_level",
                      value = round( median(dat$pw.Porig, na.rm = TRUE), 3 ) )
+  
+  
+  # sanity check on mean_CI
+  mod = lm(dat$pw.PIRepInside.sens ~ 1) 
+  expect_equal( mean(dat$pw.PIRepInside.sens, na.rm=TRUE),
+                as.numeric(mod$coefficients) )
+  Vmat = vcovCR(mod,
+                cluster = dat$pID,
+                type = "CR2")
+  CIs = conf_int(mod, vcov = Vmat)
+  myString = paste( round( as.numeric(mod$coefficients), 2 ), 
+                    " [",
+                    round( CIs$CI_L, 2 ),
+                    ", ", 
+                    round( CIs$CI_U, 2 ),
+                    "]",
+                    sep = "")
+  expect_equal( myString,
+                mean_CI(dat$pw.PIRepInside.sens == TRUE,
+                        cluster = dat$pID) )
+  # end sanity check
+
   
   # ~~ Porig ------------------
   update_result_csv( name = "Harmonic mean Porig outcome_level",
@@ -689,215 +719,6 @@ for ( l in analysisLevels ) {
   update_result_csv( name = "Mean PsigAgree1.sens outcome_level",
                      value = round( mean(dat$pw.PsigAgree1.sens, na.rm = TRUE), 2 ) )
   
-  
-  # ~ RPP-style scatterplot ------------------
-
-  # exclude 2 really extreme originals because they mess up plot scaling
-  dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) %>%
-                     filter(origES3 < 50) )
-  
-  # # randomly sample for testing purposes
-  # set.seed(2)
-  # dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
-  # #dp = dat[1:10,]
-  dp$plotID = dp$peoID # with eye toward functionizing
-  
-  #@move this
-  dp$expType.pretty = NA
-  dp$expType.pretty[ dp$expAnimal == TRUE ] = "Animal"
-  dp$expType.pretty[ dp$expAnimal == FALSE ] = "Not animal"
-  
-  
-  min( c(dp$origES3, dp$repES3), na.rm = TRUE )
-  xmin = -4
-  max( c(dp$origES3, dp$repES3), na.rm = TRUE ) 
-  xmax = 30
-  
-  shapes = c(19, 1)
-  
-  p = ggplot( data = dp,
-              aes(x = origES3,
-                  y = repES3,
-                  color = expType.pretty,
-                  shape = repES3 < origES3 ) ) + 
-    
-    # null
-    geom_abline(intercept = 0,
-                slope = 1,
-                lty = 2,
-                color = "gray") +
-    
-    geom_hline( yintercept = 0,
-                lty = 1,
-                color = "gray" ) +
-    
-    geom_vline( xintercept = 0,
-                lty = 1,
-                color = "gray" ) +
-    
-    geom_point( size = 2.4,
-                #pch = 1,
-                alpha = 1) +
-    
-    # basic prettifying
-    theme_bw() +
-    theme( panel.grid.major=element_blank(),
-           panel.grid.minor=element_blank() ) +
-    
-    scale_color_manual( values = colors ) +
-    scale_shape_manual( values = shapes ) +
-    scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
-    scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
-    
-    labs( color = "Experiment type",
-          shape = "Original > replication" ) +
-    xlab("Original study estimate (SMD)") +
-    ylab("Replication study estimate (SMD)")
-  
-  
-  # save it
-  setwd(results.dir)
-  setwd("Main figures")
-  ggsave( paste( "plot_scatter", "_", l, ".pdf", sep = "" ),
-          width = 6.5,
-          height = 5)
-  
-  
-  
-  ################# WATERFALL PLOT OF DIFFERENCES ################
-  
-  dp = dp %>%
-    arrange( desc(pw.diff) )
-  
-  dp$ind = 1:nrow(dp)
-  
-  
-  
-  p = ggplot( ) +
-    
-    # null
-    geom_hline(yintercept = 0,
-               lty = 2,
-               color = "gray") +
-    
-    # color-coded by experiment type
-    geom_point( data = dp,
-                aes(x = ind,
-                    y = pw.diff,
-                    color = expType.pretty) ) +
-    
-    geom_errorbar( data = dp,
-                   aes(x = ind,
-                       ymin = pw.diff - qnorm(.975) * sqrt(pw.diffVar),
-                       ymax = pw.diff + qnorm(.975) * sqrt(pw.diffVar),
-                       color = expType.pretty),
-                   alpha = 0.4) +
-    
-    
-    # basic prettifying
-    theme_bw() +
-    theme( panel.grid.major=element_blank(),
-           panel.grid.minor=element_blank() ) +
-    
-    scale_color_manual( values = colors ) +
-    #scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
-    #scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
-    
-    labs( color = "Experiment type" ) +
-    xlab("Pair") +
-    ylab("Replication - original estimate (SMD)")
-  
-  
-  # save it
-  setwd(results.dir)
-  setwd("Main figures")
-  ggsave(paste( "plot_waterfall_diffs", "_", l, ".pdf", sep = "" ),
-         width = 10,
-         height = 5)
-  
-  
-  
-  
-  ################# DUMBBELL PLOT OF DIFFERENCES ################
-  
-  # great info on dumbbell plot in ggplot:
-  # https://towardsdatascience.com/create-dumbbell-plots-to-visualize-group-differences-in-r-3536b7d0a19a
-  
-  # dp = droplevels( dat %>% dplyr::filter( !is.na(origES2) & !is.na(repES2) & ES2type != "" ) %>%
-  #                    dplyr::filter(ES2type %in% c("Cohen's d", "Glass' delta", "Log hazard ratio", "Cohen's dz") ) )
-  # # randomly sample for testing purposes
-  # set.seed(2)
-  # dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
-  # #dp = dat[1:10,]
-  dp$plotID = dp$peoID # with eye toward functionizing
-  
-  
-  repColor <- "#0171CE"
-  origColor <- "#DE4433"
-  digits = 2
-  
-  
-  dp = dp %>% arrange( desc(origES3) )
-  
-  # @move this?
-  dp$pw.Porig.cat = ">= 0.05"
-  dp$pw.Porig.cat[ dp$pw.Porig < 0.005 ] = "< 0.005"
-  dp$pw.Porig.cat[ dp$pw.Porig >= 0.005 & dp$pw.Porig < 0.05 ] = "< 0.05"
-  Porig.colors = c("red", "black", "gray")
-  
-  
-  p = ggplot() + 
-    
-    coord_flip() +
-
-    
-    # null
-    geom_vline(xintercept = 0,
-               lty = 2,
-               color = "gray") +
-    
-    # geom_segment(data = dp,
-    #              aes(y=plotID,
-    #                  yend=plotID,
-    #                  x=0,
-    #                  xend=.5),
-    #              color="#b2b2b2",
-    #              size=0.15) +
-    
-    geom_dumbbell(data=dp,
-                  aes(y=1:nrow(dp),
-                      x=origES3,
-                      xend=repES3,
-                      color = pw.Porig.cat),
-                  size=1.5,
-                  
-                  #color="#b2b2b2",
-                  size_x=3,
-                  size_xend = 3,
-                  colour_x = origColor,
-                  colour_xend = repColor) +
-    
-    scale_color_manual( values = Porig.colors ) +
-    labs(color = "Porig") +
-    
-    
-    # basic prettifying
-    theme_bw() +
-    theme( panel.grid.major=element_blank(),
-           panel.grid.minor=element_blank() ) +
-    
-    xlab("Point estimate") +
-    ylab("Pair")
-    
-  
-  # save it
-  setwd(results.dir)
-  setwd("Main figures")
-  ggsave( paste( "plot_dumbbell", "_", l, ".pdf", sep = "" ),
-          width = 12,
-          height = 5)
-  
-  
 }  # end giant loop over analysis levels
 
 
@@ -907,13 +728,219 @@ for ( l in analysisLevels ) {
 
 
 
-
-
-
-
-
-
-
+  # # ~ RPP-style scatterplot ------------------
+  # #@NOT CHECKED BECAUSE I DON'T THINK IT'S STILL IN USE
+  # 
+  # # exclude 2 really extreme originals because they mess up plot scaling
+  # dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) %>%
+  #                    filter(origES3 < 50) )
+  # 
+  # # # randomly sample for testing purposes
+  # # set.seed(2)
+  # # dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
+  # # #dp = dat[1:10,]
+  # dp$plotID = dp$peoID # with eye toward functionizing
+  # 
+  # #@move this
+  # dp$expType.pretty = NA
+  # dp$expType.pretty[ dp$expAnimal == TRUE ] = "Animal"
+  # dp$expType.pretty[ dp$expAnimal == FALSE ] = "Not animal"
+  # 
+  # 
+  # min( c(dp$origES3, dp$repES3), na.rm = TRUE )
+  # xmin = -4
+  # max( c(dp$origES3, dp$repES3), na.rm = TRUE ) 
+  # xmax = 30
+  # 
+  # shapes = c(19, 1)
+  # 
+  # p = ggplot( data = dp,
+  #             aes(x = origES3,
+  #                 y = repES3,
+  #                 color = expType.pretty,
+  #                 shape = repES3 < origES3 ) ) + 
+  #   
+  #   # null
+  #   geom_abline(intercept = 0,
+  #               slope = 1,
+  #               lty = 2,
+  #               color = "gray") +
+  #   
+  #   geom_hline( yintercept = 0,
+  #               lty = 1,
+  #               color = "gray" ) +
+  #   
+  #   geom_vline( xintercept = 0,
+  #               lty = 1,
+  #               color = "gray" ) +
+  #   
+  #   geom_point( size = 2.4,
+  #               #pch = 1,
+  #               alpha = 1) +
+  #   
+  #   # basic prettifying
+  #   theme_bw() +
+  #   theme( panel.grid.major=element_blank(),
+  #          panel.grid.minor=element_blank() ) +
+  #   
+  #   scale_color_manual( values = colors ) +
+  #   scale_shape_manual( values = shapes ) +
+  #   scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+  #   scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+  #   
+  #   labs( color = "Experiment type",
+  #         shape = "Original > replication" ) +
+  #   xlab("Original study estimate (SMD)") +
+  #   ylab("Replication study estimate (SMD)")
+  # 
+  # 
+  # # save it
+  # setwd(results.dir)
+  # setwd("Main figures")
+  # ggsave( paste( "plot_scatter", "_", l, ".pdf", sep = "" ),
+  #         width = 6.5,
+  #         height = 5)
+  # 
+  # 
+  # 
+  # ################# WATERFALL PLOT OF DIFFERENCES ################
+  # #@NOT CHECKED BECAUSE I DON'T THINK IT'S STILL IN USE
+  # 
+  # 
+  # dp = dp %>%
+  #   arrange( desc(pw.diff) )
+  # 
+  # dp$ind = 1:nrow(dp)
+  # 
+  # 
+  # 
+  # p = ggplot( ) +
+  #   
+  #   # null
+  #   geom_hline(yintercept = 0,
+  #              lty = 2,
+  #              color = "gray") +
+  #   
+  #   # color-coded by experiment type
+  #   geom_point( data = dp,
+  #               aes(x = ind,
+  #                   y = pw.diff,
+  #                   color = expType.pretty) ) +
+  #   
+  #   geom_errorbar( data = dp,
+  #                  aes(x = ind,
+  #                      ymin = pw.diff - qnorm(.975) * sqrt(pw.diffVar),
+  #                      ymax = pw.diff + qnorm(.975) * sqrt(pw.diffVar),
+  #                      color = expType.pretty),
+  #                  alpha = 0.4) +
+  #   
+  #   
+  #   # basic prettifying
+  #   theme_bw() +
+  #   theme( panel.grid.major=element_blank(),
+  #          panel.grid.minor=element_blank() ) +
+  #   
+  #   scale_color_manual( values = colors ) +
+  #   #scale_x_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+  #   #scale_y_continuous( limits = c(xmin, xmax), breaks = seq(xmin, xmax, 5) ) +
+  #   
+  #   labs( color = "Experiment type" ) +
+  #   xlab("Pair") +
+  #   ylab("Replication - original estimate (SMD)")
+  # 
+  # 
+  # # save it
+  # setwd(results.dir)
+  # setwd("Main figures")
+  # ggsave(paste( "plot_waterfall_diffs", "_", l, ".pdf", sep = "" ),
+  #        width = 10,
+  #        height = 5)
+  # 
+  # 
+  # 
+  # 
+  # ################# DUMBBELL PLOT OF DIFFERENCES ################
+  # #@NOT CHECKED BECAUSE I DON'T THINK IT'S STILL IN USE
+  # 
+  # 
+  # # great info on dumbbell plot in ggplot:
+  # # https://towardsdatascience.com/create-dumbbell-plots-to-visualize-group-differences-in-r-3536b7d0a19a
+  # 
+  # # dp = droplevels( dat %>% dplyr::filter( !is.na(origES2) & !is.na(repES2) & ES2type != "" ) %>%
+  # #                    dplyr::filter(ES2type %in% c("Cohen's d", "Glass' delta", "Log hazard ratio", "Cohen's dz") ) )
+  # # # randomly sample for testing purposes
+  # # set.seed(2)
+  # # dp = dp %>% group_by(ES2type) %>% sample_n( 3, replace = TRUE )
+  # # #dp = dat[1:10,]
+  # dp$plotID = dp$peoID # with eye toward functionizing
+  # 
+  # 
+  # repColor <- "#0171CE"
+  # origColor <- "#DE4433"
+  # digits = 2
+  # 
+  # 
+  # dp = dp %>% arrange( desc(origES3) )
+  # 
+  # # @move this?
+  # dp$pw.Porig.cat = ">= 0.05"
+  # dp$pw.Porig.cat[ dp$pw.Porig < 0.005 ] = "< 0.005"
+  # dp$pw.Porig.cat[ dp$pw.Porig >= 0.005 & dp$pw.Porig < 0.05 ] = "< 0.05"
+  # Porig.colors = c("red", "black", "gray")
+  # 
+  # 
+  # p = ggplot() + 
+  #   
+  #   coord_flip() +
+  # 
+  #   
+  #   # null
+  #   geom_vline(xintercept = 0,
+  #              lty = 2,
+  #              color = "gray") +
+  #   
+  #   # geom_segment(data = dp,
+  #   #              aes(y=plotID,
+  #   #                  yend=plotID,
+  #   #                  x=0,
+  #   #                  xend=.5),
+  #   #              color="#b2b2b2",
+  #   #              size=0.15) +
+  #   
+  #   geom_dumbbell(data=dp,
+  #                 aes(y=1:nrow(dp),
+  #                     x=origES3,
+  #                     xend=repES3,
+  #                     color = pw.Porig.cat),
+  #                 size=1.5,
+  #                 
+  #                 #color="#b2b2b2",
+  #                 size_x=3,
+  #                 size_xend = 3,
+  #                 colour_x = origColor,
+  #                 colour_xend = repColor) +
+  #   
+  #   scale_color_manual( values = Porig.colors ) +
+  #   labs(color = "Porig") +
+  #   
+  #   
+  #   # basic prettifying
+  #   theme_bw() +
+  #   theme( panel.grid.major=element_blank(),
+  #          panel.grid.minor=element_blank() ) +
+  #   
+  #   xlab("Point estimate") +
+  #   ylab("Pair")
+  #   
+  # 
+  # # save it
+  # setwd(results.dir)
+  # setwd("Main figures")
+  # ggsave( paste( "plot_dumbbell", "_", l, ".pdf", sep = "" ),
+  #         width = 12,
+  #         height = 5)
+  
+  
 
 
 

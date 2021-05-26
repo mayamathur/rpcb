@@ -764,7 +764,7 @@ mean_CI = function(x,
 harmonic_p = function(x) {
   library(harmonicmeanp)
   if ( all( is.na(x) ) ) return(NA)
-  # @@note: better use p.hmp here becuase it's asymptotically exact,
+  # would prefer p.hmp here becuase it's asymptotically exact,
   #  but it was giving error messages
   hmp.stat( x[ !is.na(x) ] ) 
 }
