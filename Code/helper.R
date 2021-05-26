@@ -473,6 +473,8 @@ logHR_to_logOR = function(logHR,
 # expect_equal( res$loLogOR[3], log( sqrt( exp( res$loLogRR[3] ) ) ) )  # check OR limit
 # expect_equal( ( (res$logOR[3] - res$loLogOR[3]) / qnorm(.975) )^2, res$varLogOR[3] )
 
+
+
 # Hasselblad & Hedges conversion that we think only works for common outcomes
 logOR_to_SMD = function(logOR,
                         lo = NA,
@@ -509,6 +511,33 @@ logOR_to_SMD = function(logOR,
 
 
 # # sanity check
+# # make up some cell counts
+# t = matrix( c(13, 145, 24, 259),
+#                  nrow = 2 )
+# ES = escalc( measure = "OR", ai = t[1,1], bi = t[1,2], ci = t[2,1], di = t[2,2] )
+# 
+# logOR = as.numeric(ES$yi)
+# logOR.lo = as.numeric( ES$yi - qnorm(.975) * sqrt(ES$vi) )
+# logOR.hi = as.numeric( ES$yi + qnorm(.975) * sqrt(ES$vi) )
+# 
+# # check calculation
+# res = logOR_to_SMD( logOR, logOR.lo, logOR.hi )
+# expect_equal( res$SMD[1], sqrt(3)/pi * res$logOR[1] )
+# expect_equal( res$loSMD[1], sqrt(3)/pi * res$lo[1] )
+# 
+# # instead of what the fn is doing:
+# #  1. convert CI limit of log-OR to SMD
+# #  2. get SMD variance from SMD CI width
+# # instead try:
+# #  1. convert var of log-OR itself 
+# ( varLogOR = ( ( res$logOR[1] - res$lo[1] ) / qnorm(.975) )^2 )
+# # this is obviously equal to ES$vi by direct calculation
+# 
+# # exactly equal :)
+# expect_equal( res$varSMD[1], 3/pi^2 * varLogOR )
+# 
+# 
+# # also demonstrate use with NAs
 # logOR = c(log(1.03), log(.75), NA)
 # lo = c(log(.8), NA, NA)
 # hi = c(NA, log(.9), NA)
@@ -516,12 +545,8 @@ logOR_to_SMD = function(logOR,
 # 
 # expect_equal( res$SMD[1], sqrt(3)/pi * res$logOR[1] )
 # expect_equal( res$loSMD[1], sqrt(3)/pi * res$lo[1] )
-# 
-# # instead of what the fn is doing (i.e., convert CI limit itself), try getting var of
-# #  OR first from its CI limit
-# varLogOR = ( ( res$logOR[1] - res$lo[1] ) / qnorm(.975) )^2
-# expect_equal( res$varSMD[1], sqrt(3)/pi * varLogOR )
-# # @ VERY DIFFERENT. THINK ABOUT. 
+
+
 
 
 
