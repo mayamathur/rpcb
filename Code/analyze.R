@@ -660,17 +660,21 @@ for ( l in analysisLevels ) {
   # update_result_csv( name = "Median SMD ratio outcome_level",
   #                    value = round( median(dat$pw.ratio, na.rm = TRUE), 2 ) )
   
-  update_result_csv( name = "Median SMD diff outcome_level",
-                     value = round( median(dat$pw.diff, na.rm = TRUE), 2 ) )
+  update_result_csv( name = "Mean SMD diff outcome_level",
+                     value = mean_CI(dat$pw.diff,
+                                     cluster = dat$pID) )
   
-  update_result_csv( name = "Median SMD FEest outcome_level",
-                     value = round( median(dat$pw.FEest, na.rm = TRUE), 2 ) )
+  update_result_csv( name = "Mean SMD FEest outcome_level",
+                     value = mean_CI(dat$pw.FEest,
+                                     cluster = dat$pID) )
   
-  update_result_csv( name = "Median SMD origES3 outcome_level",
-                     value = round( median(dat$origES3, na.rm = TRUE), 2 ) )
+  update_result_csv( name = "Mean SMD origES3 outcome_level",
+                     value = mean_CI(dat$origES3,
+                                     cluster = dat$pID) )
   
-  update_result_csv( name = "Median SMD repES3 outcome_level",
-                     value = round( median(dat$repES3, na.rm = TRUE), 2 ) )
+  update_result_csv( name = "Mean SMD repES3 outcome_level",
+                     value = mean_CI(dat$repES3,
+                                     cluster = dat$pID) )
   
   
   # ~~ Significance agreement ------------------
