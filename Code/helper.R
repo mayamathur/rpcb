@@ -355,7 +355,7 @@ convert_to_ES3 = function(x,
   # no conversion
   x2[ind] = x[ind]
   
-  # convert log-HRss
+  # convert log-HRs
   ind = !is.na(.ES2type) & .ES2type == "Log hazard ratio"
   x2[ind] = logOR_to_SMD( logHR_to_logOR( x[ind] ) )$SMD
   
