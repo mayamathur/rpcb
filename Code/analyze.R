@@ -576,7 +576,6 @@ fwrite(expTable, "pw_metrics_table_exp_level.csv")
 
 
 #@SANITY CHECKS STOPPED HERE :)
-# also will need to sanity-check data_prep.R
 
 # AT MULTIPLE LEVELS OF ANALYSIS: SUMMARY PLOTS AND STATS -----------------
 
@@ -601,13 +600,14 @@ for ( l in analysisLevels ) {
   if ( l == "exp_level" ) dat = de
   
   
-  ################ SUMMARY METRICS FOR MANUSCRIPT ################
+ # ~ Calculate one-off summary metrics for manuscript ------------------
   
   # Percent sign agreement: The percentage of replications whose estimates agree in direction with the original study. This could be heuristically compared to the 50% that would be expected by chance if the null holds exactly in every replication (i.e., no effect heterogeneity) and conditional on all originals’ being positive in sign.
   
   #@ Is "l" still in use?
   if ( l == "outcome_level" ) {
 
+    # ~~ Counts ------------------
     update_result_csv( name = "n all pairs outcome_level",
                        value = nrow(dat) )
     
@@ -622,9 +622,10 @@ for ( l in analysisLevels ) {
     
   }
   
+  # ~~ Prediction intervals ------------------
   update_result_csv( name = "prop pw.PIRepInside outcome_level",
-                     value = mean_CI(dat$pw.PIRepInside == TRUE,
-                                              cluster = dat$pID) )
+                     value = mean_CI( dat$pw.PIRepInside == TRUE,
+                                              cluster = dat$pID ) )
   
   update_result_csv( name = "prop pw.PIRepInside.sens outcome_level",
                      value = mean_CI(dat$pw.PIRepInside.sens == TRUE,
@@ -633,7 +634,7 @@ for ( l in analysisLevels ) {
   update_result_csv( name = "Median Porig outcome_level",
                      value = round( median(dat$pw.Porig, na.rm = TRUE), 3 ) )
   
-  #bm
+  # ~~ Porig ------------------
   update_result_csv( name = "Harmonic mean Porig outcome_level",
                      value = round( harmonic_p(dat$pw.Porig), 4 ) )
   
@@ -658,9 +659,9 @@ for ( l in analysisLevels ) {
                                      cluster = dat$pID) )
   
   
-  #bm
-  update_result_csv( name = "Median SMD ratio outcome_level",
-                     value = round( median(dat$pw.ratio, na.rm = TRUE), 2 ) )
+  # ~~ Metrics on SMD scale ------------------
+  # update_result_csv( name = "Median SMD ratio outcome_level",
+  #                    value = round( median(dat$pw.ratio, na.rm = TRUE), 2 ) )
   
   update_result_csv( name = "Median SMD diff outcome_level",
                      value = round( median(dat$pw.diff, na.rm = TRUE), 2 ) )
@@ -675,8 +676,7 @@ for ( l in analysisLevels ) {
                      value = round( median(dat$repES3, na.rm = TRUE), 2 ) )
   
   
-  # significance agreement
-  #bm
+  # ~~ Significance agreement ------------------
   
   update_result_csv( name = "prop sigAgree outcome_level",
                      value = mean_CI( dat$repSignif == dat$origSignif &
@@ -690,7 +690,7 @@ for ( l in analysisLevels ) {
                      value = round( mean(dat$pw.PsigAgree1.sens, na.rm = TRUE), 2 ) )
   
   
-  ################# RPP-STYLE SCATTERPLOT ################
+  # ~ RPP-style scatterplot ------------------
 
   # exclude 2 really extreme originals because they mess up plot scaling
   dp = droplevels( dat %>% dplyr::filter(quantPair == TRUE) %>%

@@ -641,7 +641,6 @@ n_perc_string = function(x, digits = 0) {
 # n_perc_string( c(0,0,0,0,1,1,1,0,0) )
 
 
-# STOLEN FROM SAPB-E
 # construct string with sample mean and its CI
 # by default, use cluster-robust inference
 # also works for binary variables (linear prob model)
@@ -654,7 +653,7 @@ mean_CI = function(x,
   
   if (all(is.na(x))) return("")
   
-  if(robust == TRUE & length(x) != length(cluster)) browser()
+  if(robust == TRUE & length(x) != length(cluster)) stop("Cluster var is wrong length")
   
   
   if (robust == TRUE) {
