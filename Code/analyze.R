@@ -473,6 +473,8 @@ stringsWith( pattern = "pw", x = names(do) )
 
 # ~ Expt-level dataset --------------------------------------------- 
 
+# includes all outcomes that were in dataset "do"
+
 # entries are numerical and not rounded for plotting, analysis, etc.
 # this DOES include the non-quant pairs for plotting purposes
 # keep pw.XXX variable names the same to facilitate automated plotting below
