@@ -1,7 +1,13 @@
 
-## Notes on analysis dataset
+## Notes on analysis datasets
 
-* There is a [codebook](https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv) for the analysis dataset. Variables prefaced with "pw." are various pairwise metrics describing replication success.
+* The outcome-level dataset `prepped_outcome_level_data.csv` (created by `data_prep.R` and called `do` in `analyze.R`) includes the 136 outcomes for which the direction of the original effect was coded as "Positive" and wasn't `NA`, and hence includes non-quantitative pairs (i.e., those for which we didn't have a quantitative effect size for either the original or the replication). There is a [codebook](https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv) for the analysis dataset. Variables prefaced with "pw." are various pairwise metrics describing replication success.
+
+* The dataset `prepped_outcome_level_data_pw_metrics.csv` (created by `analyze.R`) is like `prepped_outcome_level_data.csv`, but includes pairwise metrics of replication success calculated for each pair that had the relevant information for that particular metric, and left `NA` otherwise. This dataset still includes non-quantitative pairs.
+
+* The dataset `prepped_exp_level_data_pw_metrics.csv` (created by `analyze.R` and called `de` there) aggregates the pairwise metrics within each experiment and contains all 48 experiments represented in `do` (i.e., `prepped_outcome_level_data.csv`). For a given experiment, the pairwise metrics are `NA` if any of the outcomes within that experiment did not allow calculation of that pairwise metric.
+
+* The table `pw_metrics_table_exp_level.csv` is like `de` (i.e., `prepped_exp_level_data_pw_metrics.csv`), except that it includes only quantitative pairs (i.e., 33 experiments) and is formatted using character strings for prettiness in the manuscript.  
 
 * The dataset in "Auxiliary data" is from Olsson-Collentine's public repo and was used to impute the within-pair heterogeneity for sensitivity analyses.
 

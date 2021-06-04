@@ -7,6 +7,8 @@
 #  - Then aggregates these at the experiment level to create an experiment-level dataset
 #  - Conducts remaining analyses at both levels of analysis (outcome, experiment)
 
+# See READ-ME at https://github.com/mayamathur/rpcb for information about the datasets and code
+
 # Useful fns for interacting with this script (see helper.R):
 # - searchBook("p value")
 # - vr()
@@ -62,8 +64,9 @@ setwd(code.dir)
 source("helper.R")
 
 # read in prepped data
+# this dataset includes all 
 setwd(prepped.data.dir)
-do = fread("prepped_outcome_level_data.csv")
+do = fread(" ")
 
 # read in codebook for easy searching
 setwd(raw.data.dir)

@@ -4,6 +4,7 @@
 #    may not be ideal (i.e., asymmetric), but that's because they're only an intermediate
 #    step toward approximating the final SE
 
+# See READ-ME at https://github.com/mayamathur/rpcb for information about the datasets and code
 
 # And correct you should be using the "Effect size type (SMD)" for what you are doing (i.e., using all the (SMD) associated variables). And correct that it's not all on an SMD scale (because as you said that's what you are converting to where necessary). It's to enable you to do the conversion (which isn't possible for as many if you used the "Effect size type" variables). I had previously broken this out in the two sheets, so hopefully pushing together isn't causing confusion. I'll also tweak the data dictionary to make this clearer - in many ways it's an "SMD conversion possible effect size" - or something like that.
 
