@@ -66,7 +66,7 @@ source("helper.R")
 # read in prepped data
 # this dataset includes all 
 setwd(prepped.data.dir)
-do = fread(" ")
+do = fread("prepped_outcome_level_data.csv")
 
 # read in codebook for easy searching
 setwd(raw.data.dir)
