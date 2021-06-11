@@ -732,15 +732,15 @@ write_interm(d3, "intermediate_dataset_step4.csv")
 # infoQuality
 
 # make exclusions
-# @@check with Tim
 # remove pairs for which we have no info at all about original
 # we also decided to exclude null originals
-# 139 rows total after this
-d3 = d3 %>% filter( !is.na(origDirection ) & origDirection == "Positive" )
-nrow(d3)
+d3 = d3 %>% filter( !is.na(origDirection ) &
+                      origDirection == "Positive" &
+                      quantPair == TRUE )
+expect_equal( 97, nrow(d3) )
 
 
-# first level of granularity: outcome-level
+# outcome-level dataset
 setwd(prepped.data.dir)
 fwrite(d3, "prepped_outcome_level_data.csv")
 
