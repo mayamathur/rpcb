@@ -544,7 +544,7 @@ temp = d2 %>% group_by(pID, eID, oID) %>%
   mutate( FE = sum(repES3 * 1/repVar3) / sum(1/repVar3),
           FEvar = 1 / sum(1/repVar3),
           # Wald p-value
-          FEpval = 2 * ( 1 - pnorm( FE / sqrt(FEvar) ) ) )
+          FEpval = 2 * ( 1 - pnorm( abs( FE / sqrt(FEvar) ) ) ) )
 
 expect_equal( nrow(temp), nrow(d2) )
 
@@ -767,7 +767,7 @@ expect_equal( 97, nrow(d3) )
 #bm
 # why aren't we reproducing Tim's 42?
 table(d3$repES3 > 0)
-table(d3$repPval < 0.05) # THIS IS ALREADY ONLY 40
+table(d3$repPval < 0.05) 
 table(d3$repES3 > 0 & d3$repPval < 0.05)  # want 42
 
 
