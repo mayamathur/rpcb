@@ -220,7 +220,7 @@ update_codebook_row = function(var, vec) {
 }
 
 
-update_codebook_row( "repSignif", c("bin", "Was replication p<0.05?") )
+update_codebook_row( "repSignif", c("bin", "Was replication p<0.05? (This and all other 'rep' variables in this dataset are regarding the FE pooled estimate when there were multiple internal replications.)") )
 update_codebook_row( "origSignif", c("bin", "Was original p<0.05?") )
 
 update_codebook_row( "quantPair", c("bin", "Did we have quantitative ES for both original and replication?") )
@@ -497,7 +497,10 @@ de = do %>%
              pw.Porig.sens = harmonic_p(pw.PorigSens),
              
              # overall proportion (within this experiment) expected to agree
-             pw.SigAgree = 100* mean(repSignif == origSignif &
+             # note that we're not requiring repSignif = origSignif because some 
+             # originals were interpreted as "positive" even though they weren't p<0.05
+             # and this dataset already retains only originals coded as "positive"
+             pw.SigAgree = 100* mean(repSignif == TRUE &
                                        repDirection == origDirection),
              pw.PercSigAgree1 = 100 * mean(pw.PsigAgree1),
              pw.PercSigAgree1.sens = 100 * mean(pw.PsigAgree1.sens)
@@ -532,7 +535,7 @@ expTable = do %>%
              Porig.sens = format.pval( harmonic_p( pw.PorigSens ), digits = 2, eps = "0.0001" ),
              
              # overall proportion (within this experiment) expected to agree
-             SigAgree = n_perc_string( repSignif == origSignif & repDirection == origDirection),
+             SigAgree = n_perc_string( repSignif == TRUE & repDirection == origDirection),
              PercSigAgree1 = paste( round( 100 * mean(pw.PsigAgree1), 0 ), "%", sep ="" ),
              PercSigAgree1.sens = paste( round( 100 * mean(pw.PsigAgree1.sens), 0 ), "%", sep ="" )
   ) 
@@ -684,8 +687,9 @@ for ( l in analysisLevels ) {
   
   # ~~ Significance agreement ------------------
   
+  #bm
   update_result_csv( name = "prop sigAgree outcome_level",
-                     value = mean_CI( dat$repSignif == dat$origSignif &
+                     value = mean_CI( dat$repSignif == TRUE &
                                         dat$repDirection == dat$origDirection,
                                       cluster = dat$pID ) )
   

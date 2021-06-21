@@ -38,7 +38,7 @@ Did.the.replication.study.have.a.potential.conflict.of.issue.statement.,,
 Number.of.lab.s..contracted.for.the.entire.paper,,
 Contracted.lab.s..for.the.entire.paper,,
 Notes,,
-repSignif,bin,Was replication p<0.05?
+repSignif,bin,Was replication p<0.05? (This and all other 'rep' variables in this dataset are regarding the FE pooled estimate when there were multiple internal replications.)
 origSignif,bin,Was original p<0.05?
 changes,,
 changes_a..GTE.moderate.success,,

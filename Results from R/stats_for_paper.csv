@@ -2,13 +2,17 @@ name,value,section
 n all pairs outcome_level,97,NA
 n (perc) non-quant pairs outcome_level,0 (0%),NA
 n (perc) quant pairs outcome_level,97 (100%),NA
-n (perc) same direction all pairs outcome_level,36 (37%),NA
+n (perc) same direction all pairs outcome_level,40 (41%),NA
 prop pw.PIRepInside outcome_level,0.58 [0.44, 0.72]
 NA,,
 NA,,
 NA,,
 NA,,
+NA,,
+NA,,
 prop pw.PIRepInside.sens outcome_level,0.65 [0.51, 0.79]
+NA,,
+NA,,
 NA,,
 NA,,
 NA,,
@@ -19,7 +23,11 @@ prop Porig<0.005 outcome_level,0.14 [0.05, 0.24]
 NA,,
 NA,,
 NA,,
+NA,,
+NA,,
 prop Porig<0.05 outcome_level,0.42 [0.28, 0.56]
+NA,,
+NA,,
 NA,,
 NA,,
 NA,,
@@ -28,7 +36,11 @@ prop PorigSens<0.005 outcome_level,0.12 [0.02, 0.23]
 NA,,
 NA,,
 NA,,
+NA,,
+NA,,
 prop PorigSens<0.05 outcome_level,0.35 [0.21, 0.49]
+NA,,
+NA,,
 NA,,
 NA,,
 NA,,
@@ -36,7 +48,9 @@ Median SMD diff outcome_level,2.15,NA
 Median SMD FEest outcome_level,0.92,NA
 Median SMD origES3 outcome_level,2.98,NA
 Median SMD repES3 outcome_level,0.56,NA
-prop sigAgree outcome_level,0.35 [0.17, 0.53]
+prop sigAgree outcome_level,0.41 [0.23, 0.60]
+NA,,
+NA,,
 NA,,
 NA,,
 NA,,
@@ -46,7 +60,11 @@ Mean SMD diff outcome_level,4.77 [0.60, 8.94]
 NA,,
 NA,,
 NA,,
+NA,,
+NA,,
 Mean SMD FEest outcome_level,1.67 [0.93, 2.42]
+NA,,
+NA,,
 NA,,
 NA,,
 NA,,
@@ -54,7 +72,11 @@ Mean SMD origES3 outcome_level,6.15 [1.83, 10.47]
 NA,,
 NA,,
 NA,,
+NA,,
+NA,,
 Mean SMD repES3 outcome_level,1.38 [0.42, 2.34]
+NA,,
+NA,,
 NA,,
 NA,,
 NA,,

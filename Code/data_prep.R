@@ -165,6 +165,9 @@ d2 = d %>% rename( pID = "Paper #",
                    origPval = "Original p value (SMD)",
                    origSE = "Original standard error (SMD)",
                    
+                   # IMPORTANT: all of these are currently defined at the level of the 
+                   #  internal replication, NOT the FE-pooled replication that we use in 
+                   #  actual analyses
                    repES = "Replication effect size (SMD)",
                    repESLo = "Replication lower CI (SMD)",
                    repESHi = "Replication upper CI (SMD)",
@@ -539,7 +542,9 @@ table(t$n)
 # temp has same dimensions as d2
 temp = d2 %>% group_by(pID, eID, oID) %>%
   mutate( FE = sum(repES3 * 1/repVar3) / sum(1/repVar3),
-          FEvar = 1 / sum(1/repVar3) )
+          FEvar = 1 / sum(1/repVar3),
+          # Wald p-value
+          FEpval = 2 * ( 1 - pnorm( FE / sqrt(FEvar) ) ) )
 
 expect_equal( nrow(temp), nrow(d2) )
 
@@ -563,16 +568,20 @@ if ( run.sanity == TRUE ) {
   
   # check one with 2 internal replications
   id = t$peoID[t$n == 2][1]
+  # compare to metafor
+  mod = rma.uni( yi = d2$repES3[d2$peoID == id],
+                 vi = d2$repVar3[d2$peoID == id],
+                 method = "FE")
   # point estimate
   expect_equal( unique(temp$FE[d2$peoID %in% id]),
-                as.numeric( rma.uni( yi = d2$repES3[d2$peoID == id],
-                                     vi = d2$repVar3[d2$peoID == id],
-                                     method = "FE")$b ) )
+                as.numeric( mod$b ) )
   # variance
   expect_equal( unique(temp$FEvar[d2$peoID %in% id]),
-                as.numeric( rma.uni( yi = d2$repES3[d2$peoID == id],
-                                     vi = d2$repVar3[d2$peoID == id],
-                                     method = "FE")$se^2 ) )
+                as.numeric( mod$se^2 ) )
+  
+  # p-value
+  expect_equal( unique(temp$FEpval[d2$peoID %in% id]),
+                as.numeric( mod$pval ) )
   
   # check that FE estimate is always equal to replication estimate
   #  when nInternal = 1, and otherwise is not
@@ -581,14 +590,26 @@ if ( run.sanity == TRUE ) {
 }
 
 
-
 ###### Overwrite the d2 variables with pooled ones #####
+
+# OVERWRITE repPval, etc. (initially defined at the level of internal replications)
+#  to be based on the pooled internal replications
 d2$repES3 = temp$FE
 d2$repVar3 = temp$FEvar
 d2$repSE3 = sqrt(temp$FEvar)
+d2$repPval = temp$FEpval
+
+d2$repDirection = NA
+d2$repDirection[ d2$repES3 > 0 & d2$repPval < 0.05 ] = "Positive"
+d2$repDirection[ d2$repES3 > 0 & d2$repPval >= 0.05 ] = "Null-positive"
+d2$repDirection[ d2$repES3 < 0 & d2$repPval >= 0.05 ] = "Null-negative"
+d2$repDirection[ d2$repES3 < 0 & d2$repPval < 0.05 ] = "Negative"
+
+d2$repSignif = d2$repPval < 0.05
 
 # keep only 1 row per outcome (collapse over internal replications)
 d3 = d2[ !duplicated(d2$peoID), ]
+
 
 write_interm(d3, "intermediate_dataset_step4.csv")
 
@@ -731,6 +752,9 @@ write_interm(d3, "intermediate_dataset_step4.csv")
 # materialsRequested = "Key materials asked to be shared",
 # infoQuality
 
+# read back in
+d3 = read_interm("intermediate_dataset_step4.csv")
+
 # make exclusions
 # remove pairs for which we have no info at all about original
 # we also decided to exclude null originals
@@ -740,9 +764,16 @@ d3 = d3 %>% filter( !is.na(origDirection ) &
 expect_equal( 97, nrow(d3) )
 
 
+#bm
+# why aren't we reproducing Tim's 42?
+table(d3$repES3 > 0)
+table(d3$repPval < 0.05) # THIS IS ALREADY ONLY 40
+table(d3$repES3 > 0 & d3$repPval < 0.05)  # want 42
+
+
+
 # outcome-level dataset
 setwd(prepped.data.dir)
 fwrite(d3, "prepped_outcome_level_data.csv")
-
 
 
