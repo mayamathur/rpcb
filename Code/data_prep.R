@@ -558,13 +558,19 @@ expect_equal( nrow(temp), nrow(d2) )
 #   mutate( FE = mean(repES3) )
 
 ##### Sanity checks #####
-
 if ( run.sanity == TRUE ) {
   # manually reproduce for ones with 1 replication
   id = t$peoID[t$n == 1]
   # FE estimate should just be the single estimate
   expect_equal(temp$FE[d2$peoID %in% id], d2$repES3[d2$peoID %in% id])
   expect_equal(temp$FEvar[d2$peoID %in% id], d2$repVar3[d2$peoID %in% id])
+  
+  # note that the FE p-value may NOT agree with rep p-value even 
+  #  when there is only 1 internal replication, presumably because single replications
+  #  might not use a Wald test
+  cbind( temp$FEpval[d2$peoID %in% id], d2$repPval[d2$peoID %in% id] )
+  # compare them visually
+  plot( temp$FEpval[d2$peoID %in% id], d2$repPval[d2$peoID %in% id] )
   
   # check one with 2 internal replications
   id = t$peoID[t$n == 2][1]
@@ -592,12 +598,32 @@ if ( run.sanity == TRUE ) {
 
 ###### Overwrite the d2 variables with pooled ones #####
 
+# sanity check: check on 
+
 # OVERWRITE repPval, etc. (initially defined at the level of internal replications)
 #  to be based on the pooled internal replications
+
+# as checked above in sanity check, OK to overwrite the estimate and SE/variance when 
+#  there's only 1 internal replication...
 d2$repES3 = temp$FE
 d2$repVar3 = temp$FEvar
 d2$repSE3 = sqrt(temp$FEvar)
-d2$repPval = temp$FEpval
+# ...but we will NOT overwrite p-value when there's 1 internal replication because 
+#  of Wald vs. other p-values issue
+idMultiple = t$peoID[t$n > 1]
+d2$repPval[ d2$peoID %in% idMultiple ] = temp$FEpval[ temp$peoID %in% idMultiple ]
+
+# sanity checks on p-value overwriting
+if ( run.sanity == TRUE ) {
+  idSingle = t$peoID[t$n == 1]
+  expect_equal( TRUE,
+                any( d2$repPval[ d2$peoID %in% idSingle ] != temp$FEpval[ temp$peoID %in% idSingle ] ) )
+  
+ 
+  expect_equal( d2$repPval[ d2$peoID %in% idMultiple ],
+                    temp$FEpval[ temp$peoID %in% idMultiple ] )
+}
+
 
 d2$repDirection = NA
 d2$repDirection[ d2$repES3 > 0 & d2$repPval < 0.05 ] = "Positive"
@@ -764,12 +790,9 @@ d3 = d3 %>% filter( !is.na(origDirection ) &
 expect_equal( 97, nrow(d3) )
 
 
-#bm
-# why aren't we reproducing Tim's 42?
-table(d3$repES3 > 0)
-table(d3$repPval < 0.05) 
-table(d3$repES3 > 0 & d3$repPval < 0.05)  # want 42
 
+# sanity check against Tim's count of 42 for significance agreement
+expect_equal( sum(d3$repES3 > 0 & d3$repPval < 0.05), 42 )
 
 
 # outcome-level dataset
