@@ -792,7 +792,10 @@ expect_equal( 97, nrow(d3) )
 
 
 # sanity check against Tim's count of 42 for significance agreement
+# in several equivalent ways
 expect_equal( sum(d3$repES3 > 0 & d3$repPval < 0.05), 42 )
+expect_equal( sum(d3$repES3 > 0 & d3$repSignif == TRUE ), 42 )
+expect_equal( sum(d3$repDirection == "Positive" ), 42 )
 
 
 # outcome-level dataset
