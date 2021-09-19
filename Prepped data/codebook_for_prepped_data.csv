@@ -1,4 +1,5 @@
 variable,type,description
+Replication.study.figure,,
 Were.materials.shippped.between.replicating.labs.,,
 If.a.material.was.shipped.between.replicating.labs..what.was.it.,,
 What.types.of.experimental.techniques.were.utilized.,,
@@ -83,13 +84,14 @@ pw.PIHi,,
 pw.PIRepInside,bin,Was replication inside 95% PI?
 pw.PILo.sens,,
 pw.PIHi.sens,,
-pw.PIRepInside.sens,,
+pw.PIRepInside.sens,bin,"Was replication inside 95% PI, allowing for hypothetical heterogeneity?"
 pw.Porig,num,p-value for original inconsistency with replication
 pw.PorigSens,num,"p-value for original inconsistency with replication, allowing for hypothetical heterogeneity"
 pw.ratio,num,origES3 / repES3
 pw.ratioVar,,
 pw.diff,num,origES3 - repES3
 pw.diffVar,,
+pw.observedSigAgree,num,Observed significance agreement
 pw.PsigAgree1,num,"Expected probability of significance agreement under null, assuming no heterogeneity (Mathur & VanderWeele)"
 pw.PsigAgree1.sens,num,"Expected probability of significance agreement under null, with imputed heterogeneity (Mathur & VanderWeele)"
 pw.FEest,num,Fixed-effects estimate pooling original and replication

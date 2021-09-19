@@ -121,6 +121,7 @@ do = do %>%
                           origVar3, 
                           repES3,
                           repVar3,
+                          repDirection,
                           t2 = t2.imp) )
 
 
@@ -178,6 +179,10 @@ median(do$pw.Porig, na.rm=TRUE); median(do$pw.PorigSens, na.rm=TRUE)
 expect_equal( yio - yir, do$pw.diff )
 expect_equal( vio + vir, do$pw.diffVar )
 
+# check observed significance agreement
+expect_equal( do$repDirection == "Positive",
+              do$pw.observedSigAgree )
+
 # check homogeneous PsigAgree (expected significance agreement)
 pooled.SE = sqrt( vio + vir )
 # because all yio>0:
@@ -232,13 +237,15 @@ update_codebook_row( "ES2Type", c("char", "Scale of ES2") )
 update_codebook_row( "origES3", c("num", "A meta-analyzable effect size on the SMD scale") )
 
 update_codebook_row( "pw.PIRepInside", c("bin", "Was replication inside 95% PI?") )
-update_codebook_row( "pw.PIRepInsid.sens", c("bin", "Was replication inside 95% PI, allowing for hypothetical heterogeneity?") )
+update_codebook_row( "pw.PIRepInside.sens", c("bin", "Was replication inside 95% PI, allowing for hypothetical heterogeneity?") )
 
 update_codebook_row( "pw.Porig", c("num", "p-value for original inconsistency with replication") )
 update_codebook_row( "pw.PorigSens", c("num", "p-value for original inconsistency with replication, allowing for hypothetical heterogeneity") )
 
 update_codebook_row( "pw.ratio", c("num", "origES3 / repES3") )
 update_codebook_row( "pw.diff", c("num", "origES3 - repES3") )
+
+update_codebook_row( "pw.observedSigAgree", c("num", "Observed significance agreement") )
 
 update_codebook_row( "pw.PsigAgree1", c("num", "Expected probability of significance agreement under null, assuming no heterogeneity (Mathur & VanderWeele)") )
 
@@ -393,14 +400,12 @@ expect_equal( format_stat(myBonf, 2),
 
 # Analyze Pairwise Metrics That *Don't* Have Variances --------------------------------------------- 
 
-
 outcomesWithoutVar = c("pw.ratio",
                        "pw.PIRepInside",
                        "pw.PIRepInside.sens",
                        "pw.Porig",
                        "pw.PorigSens",
-                       "pw.PsigAgree1",
-                       "pw.PsigAgree1.sens")
+                       "pw.observedSigAgree")
 
 for ( i in outcomesWithoutVar ) {
   modTable = safe_analyze_moderators(  .dat = do[ do$quantPair == TRUE, ],
@@ -500,8 +505,8 @@ de = do %>%
              # note that we're not requiring repSignif = origSignif because some 
              # originals were interpreted as "positive" even though they weren't p<0.05
              # and this dataset already retains only originals coded as "positive"
-             pw.SigAgree = 100* mean(repSignif == TRUE &
-                                       repDirection == origDirection),
+             # also no need to condition on repSignif because repDirection already includes this
+             pw.SigAgree = 100* mean(repDirection == origDirection),
              pw.PercSigAgree1 = 100 * mean(pw.PsigAgree1),
              pw.PercSigAgree1.sens = 100 * mean(pw.PsigAgree1.sens)
   ) 
@@ -535,7 +540,7 @@ expTable = do %>%
              Porig.sens = format.pval( harmonic_p( pw.PorigSens ), digits = 2, eps = "0.0001" ),
              
              # overall proportion (within this experiment) expected to agree
-             SigAgree = n_perc_string( repSignif == TRUE & repDirection == origDirection),
+             SigAgree = n_perc_string( repDirection == origDirection ),
              PercSigAgree1 = paste( round( 100 * mean(pw.PsigAgree1), 0 ), "%", sep ="" ),
              PercSigAgree1.sens = paste( round( 100 * mean(pw.PsigAgree1.sens), 0 ), "%", sep ="" )
   ) 
@@ -687,10 +692,8 @@ for ( l in analysisLevels ) {
   
   # ~~ Significance agreement ------------------
   
-  #bm
   update_result_csv( name = "prop sigAgree outcome_level",
-                     value = mean_CI( dat$repSignif == TRUE &
-                                        dat$repDirection == dat$origDirection,
+                     value = mean_CI( dat$repDirection == dat$origDirection,
                                       cluster = dat$pID ) )
   
   update_result_csv( name = "Mean PsigAgree1 outcome_level",

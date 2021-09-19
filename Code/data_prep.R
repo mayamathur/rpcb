@@ -56,14 +56,14 @@ source("helper.R")
 useView = FALSE
 
 # should we run sanity checks?
-run.sanity = FALSE
+run.sanity = TRUE
 
 # read in paper-, experiment-, and outcome-level data
 setwd(raw.data.dir)
 # we won't actually be using the first of these
-dp = read_xlsx("2021_5_25_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
-de = read_xlsx("2021_5_25_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
-do = read_xlsx("2021_5_25_raw_data.xlsx", sheet = "Raw outcome level data"); nrow(do)
+dp = read_xlsx("2021_9_19_raw_data.xlsx", sheet = "Paper level data"); nrow(dp)
+de = read_xlsx("2021_9_19_raw_data.xlsx", sheet = "Experiment level data"); nrow(de)
+do = read_xlsx("2021_9_19_raw_data.xlsx", sheet = "Outcome level data"); nrow(do)
 
 
 ##### Sanity Checks on Hierarchical Data Structure #####

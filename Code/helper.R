@@ -10,12 +10,13 @@ analyze_one_row = function(origES3,
                            origVar3, 
                            repES3,
                            repVar3,
+                           repDirection,
                            # heterogeneity value to impute in sens analyses
                            t2){
   
   
   # note: need to keep these variables matching with those in the eventual return
-  if ( is.na(origES3) | is.na(origVar3) | is.na(repES3) | is.na(repVar3) ) {
+  if ( is.na(origES3) | is.na(origVar3) | is.na(repES3) | is.na(repVar3) | is.na(repDirection) ) {
     return( data.frame( pw.PILo = NA,
                         pw.PIHi = NA,
                         pw.PIRepInside = NA,
@@ -35,6 +36,7 @@ analyze_one_row = function(origES3,
                         pw.diff = NA,
                         pw.diffVar = NA,
                         
+                        pw.observedSigAgree = NA,
                         pw.PsigAgree1 = NA,
                         pw.PsigAgree1.sens = NA,
                         
@@ -78,6 +80,8 @@ analyze_one_row = function(origES3,
   PIHi.sens = yio + qnorm(0.975) * pooled.SE
   PIinside.sens = (yir > PILo.sens) & (yir < PIHi.sens)
   
+  # observed significance agreement
+  observedSigAgree = ( repDirection == "Positive" )
   
   # P(replication p < 0.05)
   PsigAgree1 = prob_signif_agree(yio = origES3,
@@ -124,6 +128,7 @@ analyze_one_row = function(origES3,
                       pw.diff = origES3 - repES3,
                       pw.diffVar = origVar3 + repVar3,
                       
+                      pw.observedSigAgree = observedSigAgree,
                       pw.PsigAgree1 = PsigAgree1,
                       pw.PsigAgree1.sens = PsigAgree1.sens,
                       
@@ -145,7 +150,7 @@ analyze_one_row = function(origES3,
 # analyze a subset or a moderator
 # n.tests: for Bonferroni
 analyze_moderators = function( .dat,
-                               yi.name,  # a pairwise metrics
+                               yi.name,  # a pairwise metric
                                vi.name = NA,  # variances of pairwise metrics (use a single NA if doesn't have one)
                                
                                analysis.label,
