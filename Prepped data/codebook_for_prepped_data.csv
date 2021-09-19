@@ -1,8 +1,12 @@
 variable,type,description
+If.experiment.incomplete..why.,,
+changesNeededRaw,,
+If.modifications.were.needed.for.experiment.to.proceed..what.were.they.,,
+changesSuccess,,
+If.modifications.unable.to.be.fully.implemented..why.,,
 Replication.study.figure,,
 Were.materials.shippped.between.replicating.labs.,,
 If.a.material.was.shipped.between.replicating.labs..what.was.it.,,
-What.types.of.experimental.techniques.were.utilized.,,
 Was.the.original.experiment.blinded.,,
 Was.the.replication.experiment.blinded.,,
 Was.the.original.experiment.randomized.,,
