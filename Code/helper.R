@@ -860,28 +860,6 @@ robu2 = function(yi, vi) {
 
 
 
-# recodes a Qualtrics checkbox question (i.e., a single column with comma-separated options)
-#  into its constituent non-mutually-exclusive dummy variables
-recode_checkboxes = function( .d, 
-                              var ) {
-  
-  # NAs (character) represent that none of the categories apply
-  # don't include these as their own dummy
-  .d[[var]][ .d[[var]] == "NA" ] = NA
-  
-  # split race into dummies
-  # https://stackoverflow.com/questions/27630588/split-string-column-to-create-new-binary-columns/27630769#27630769
-  library(qdapTools)
-  t = mtabulate( strsplit( .d[[var]], ",") )
-  
-  # remove the old variable and replace with the new one
-  .d = .d %>% select(-var)
-  .d = cbind(.d, t)
-  
-  return(.d)
-}
-
-
 # for reproducible manuscript-writing
 # adds a row to the file "stats_for_paper" with a new statistic or value for the manuscript
 # optionally, "section" describes the section of code producing a given result
