@@ -270,16 +270,7 @@ d2 = dummy_cols(.data = d2, select_columns = "materialsShared")
 # recode lab type
 d2$hasCROLab = whichStrings( x = d2$labsContracted, pattern = "CRO" )
 d2$hasCoreLab = whichStrings( x = d2$labsContracted, pattern = "Core" )
-# below is no longer in use:
-# d2$labType = NA
-# d2$labType[ hasCROLab & !hasCoreLab ] = "c.CRO only"
-# d2$labType[ hasCROLab & hasCoreLab ] = "b.Both"
-# d2$labType[ !hasCROLab & hasCoreLab ] = "a.Core only"
-# # sanity check
-# table(d2$labsContracted, d2$labType)
-# # dummy-coded version of labType
-# # only used for making the moderator correlation matrix
-# d2 = dummy_cols(.data = d2, select_columns = "labType")
+
 
 # recode experiment type as animal vs. non-animal
 d2$expAnimal = (d2$expType == "Animal")
@@ -343,9 +334,6 @@ t = d2 %>% group_by(EStype, Statistical.test.applied.to.original.data..SMD.) %>%
   summarise(n())
 t
 
-#@CHECKING WITH TIM ABOUT WHETHER THESE KINDS OF THINGS ARE ACTUALLY SMDS:
-d$`Original effect size`[ d$`Effect size type` == "Pearson's r"]
-d$`Original effect size (SMD)`[ d$`Effect size type` == "Pearson's r"]
 
 
 ##### ES2: Converted to a scale that can be meta-analyzed, but NOT necessarily SMDs #####
@@ -538,14 +526,6 @@ temp = d2 %>% group_by(pID, eID, oID) %>%
 
 expect_equal( nrow(temp), nrow(d2) )
 
-# # doesn't work; not sure immediately why
-# x = d2 %>% group_by(pID, eID, oID) %>%
-#   mutate( FE = as.numeric( rma.uni(yi = repES3, vi = repVar3, method = "FE")$b ) )
-
-# # but this works?
-# # works
-# x = d2 %>% group_by(pID, eID, oID) %>%
-#   mutate( FE = mean(repES3) )
 
 ##### Sanity checks #####
 if ( run.sanity == TRUE ) {
@@ -588,7 +568,6 @@ if ( run.sanity == TRUE ) {
 
 ###### Overwrite the d2 variables with pooled ones #####
 
-# sanity check: check on 
 
 # OVERWRITE repPval, etc. (initially defined at the level of internal replications)
 #  to be based on the pooled internal replications
