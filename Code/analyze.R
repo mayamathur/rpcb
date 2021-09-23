@@ -527,7 +527,7 @@ expTable = do %>%
   group_by(peID) %>%
   summarise( nOutcomes = n(),
              
-             origES3 = round( mean(origES3, 2) ),
+             origES3 = round( mean(origES3), 2 ),
              repES3 = round( mean(repES3), 2 ),
              
              FEest = round( mean(pw.FEest), 2 ),
