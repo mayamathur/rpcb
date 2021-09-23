@@ -1,8 +1,5 @@
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                                   ANALYSIS HELPER                                 #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
+# ANALYSIS HELPER  ---------------------------------------------
 
 # calculates pairwise metrics for one row of data (whether at outcome- or experiment-level)
 # see analyze.R for sanity checks
@@ -287,22 +284,10 @@ safe_analyze_moderators = function(...) {
 }
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                                   DATA-PREP HELPER                                #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# DATA-PREP HELPER ---------------------------------------------
 
 
-################################ MISC ################################
-
-# ALSO PUT IN METAUTILITY
-# tests proposition x
-# but returns FALSE instead of NA if x itself is NA
-eqNA = function(x){
-  !is.na(x) & x == 1
-}
-#eqNA(NA == 5)
-
-################################ EFFECT-SIZE CONVERSIONS ################################
+# ~ EFFECT-SIZE CONVERSIONS ---------------------------------------------
 
 # convert to scale that's appropriate for meta-analysis (e.g., log-HR instead of HR),
 #  but NOT to a mutually comparable scale across pairs
@@ -455,7 +440,6 @@ logHR_to_logOR = function(logHR,
 }
 
 # # sanity checks:
-# # test only
 # logHR = c(NA, NA, log(1.03), log(2), log(2))
 # rareY = c(NA, NA, FALSE, TRUE, FALSE)
 # lo = c(NA, NA, log(.8), NA, log(1.5))
@@ -604,7 +588,8 @@ cohen_d = function( x2, y ) {
 
 
 
-################################ FNS FOR AGGREGATING PAIRWISE METRICS WITH STRING OUTPUT ################################
+# ~ FNS FOR AGGREGATING PAIRWISE METRICS, YIELDING STRING OUTPUT ---------------------------------------------
+
 
 # aggregation fns: 
 # plain mean (ratio)
@@ -739,8 +724,6 @@ mean_CI = function(x,
 
 
 
-
-
 harmonic_p = function(x) {
   library(harmonicmeanp)
   if ( all( is.na(x) ) ) return(NA)
@@ -760,7 +743,14 @@ RE_string = function(yi, vi, digits = 2) {
 }
 
 
-################################ MISCELLANEOUS FORMATTING AND CONVENIENCE FNS ################################
+# MISCELLANEOUS FORMATTING AND CONVENIENCE FNS---------------------------------------------
+
+# tests proposition x
+# but returns FALSE instead of NA if x itself is NA
+eqNA = function(x){
+  !is.na(x) & x == 1
+}
+#eqNA(NA == 5)
 
 
 # stands for "wipe results"

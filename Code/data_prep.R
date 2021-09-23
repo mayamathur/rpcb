@@ -254,15 +254,6 @@ table(d2$infoNeeded > 0)  # this means that they ALWAYS needed clarifications
 expect_equal( d2$infoNeeded == FALSE, is.na(d2$infoQuality) )
 
 
-#@: no longer in use
-# # make dummies from variables coded as comma-separated categories
-# # @IMPORTANT: note that response quality coding exists even if no materials were requested
-# table( is.na(d2$materialsRequested), d2$infoQuality )  
-# d2 = recode_checkboxes(.d = d2,
-#                        var = "materialsRequested")
-# d2 = d2 %>% rename( "reqAntibodies"  = "Antibodies",
-#                     "reqCells" = "Cells",
-#                     "reqPlasmids" = "Plasmids" )
 
 # were (any) materials actually shared?
 # regardless of whether they were requested
