@@ -1,7 +1,9 @@
 
 ## Notes on analysis datasets
 
-* The outcome-level dataset `prepped_outcome_level_data.csv` (created by `data_prep.R` and called `do` in `analyze.R`) includes the 136 outcomes for which the estimate direction of the original effect was coded as "Positive" and wasn't `NA`, and hence includes non-quantitative pairs (i.e., those for which we didn't have a quantitative effect size for either the original or the replication). There is a [codebook](https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv) for the analysis dataset. Variables prefaced with "pw." are various pairwise metrics describing replication success.
+* The outcome-level dataset `prepped_outcome_level_data.csv` (created by `data_prep.R` and called `do` in `analyze.R`) includes the 136 outcomes for which the estimate direction of the original effect was coded as "Positive" and wasn't `NA`, and hence includes non-quantitative pairs (i.e., those for which we didn't have a quantitative effect size for either the original or the replication). There is a [codebook](https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv) for the analysis dataset.
+    - Variables prefaced with "pw." are various pairwise metrics describing replication success.
+    - The CI limits for ES2 and ES3 were only used as an intermediate step toward approximating the final SE rather than as standalone CIs. we recommend against interpreting these intermediate CIs directly. This is because we calculated these intermediate CI limits by directly transforming CI limits from the native scale, which can yield a CI that is not ideal because of symmetry considerations (see `data_prep.R` for details).
 
 * The dataset `prepped_outcome_level_data_pw_metrics.csv` (created by `analyze.R`) is like `prepped_outcome_level_data.csv`, but includes pairwise metrics of replication success calculated for each pair that had the relevant information for that particular metric, and left `NA` otherwise. This dataset still includes non-quantitative pairs.
 
@@ -36,7 +38,5 @@ The table [pw_metrics_table_exp_level.csv](https://github.com/mayamathur/rpcb/bl
 
 The table [moderator_regressions_outcome_level.csv](https://github.com/mayamathur/rpcb/blob/master/Results%20from%20R/Main%20tables/moderator_regressions_outcome_level.csv) shows the results of meta-regressions on the moderators.
 
-
-## To do
 
 

@@ -365,9 +365,18 @@ summary {
 </div>
 
 
-<div id="notes-on-analysis-dataset" class="section level2">
-<h2>Notes on analysis dataset</h2>
-<p>There is a <a href="https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv">codebook</a> for the analysis dataset. Variables prefaced with “pw.” are various pairwise metrics describing replication success.</p>
+<div id="notes-on-analysis-datasets" class="section level2">
+<h2>Notes on analysis datasets</h2>
+<ul>
+<li><p>The outcome-level dataset <code>prepped_outcome_level_data.csv</code> (created by <code>data_prep.R</code> and called <code>do</code> in <code>analyze.R</code>) includes the 136 outcomes for which the estimate direction of the original effect was coded as “Positive” and wasn’t <code>NA</code>, and hence includes non-quantitative pairs (i.e., those for which we didn’t have a quantitative effect size for either the original or the replication). There is a <a href="https://github.com/mayamathur/rpcb/blob/master/Prepped%20data/codebook_for_prepped_data.csv">codebook</a> for the analysis dataset.</p>
+<ul>
+<li>Variables prefaced with “pw.” are various pairwise metrics describing replication success.</li>
+</ul></li>
+<li><p>The dataset <code>prepped_outcome_level_data_pw_metrics.csv</code> (created by <code>analyze.R</code>) is like <code>prepped_outcome_level_data.csv</code>, but includes pairwise metrics of replication success calculated for each pair that had the relevant information for that particular metric, and left <code>NA</code> otherwise. This dataset still includes non-quantitative pairs.</p></li>
+<li><p>The dataset <code>prepped_exp_level_data_pw_metrics.csv</code> (created by <code>analyze.R</code> and called <code>de</code> there) aggregates the pairwise metrics within each experiment and contains all 48 experiments represented in <code>do</code> (i.e., <code>prepped_outcome_level_data.csv</code>). For a given experiment, the pairwise metrics are <code>NA</code> if any of the outcomes within that experiment did not allow calculation of that pairwise metric.</p></li>
+<li><p>The table <code>pw_metrics_table_exp_level.csv</code> is like <code>de</code> (i.e., <code>prepped_exp_level_data_pw_metrics.csv</code>), except that it includes only quantitative pairs (i.e., 33 experiments) and is formatted using character strings for prettiness in the manuscript.</p></li>
+<li><p>The dataset in “Auxiliary data” is from Olsson-Collentine’s public repo and was used to impute the within-pair heterogeneity for sensitivity analyses.</p></li>
+</ul>
 </div>
 <div id="notes-on-analysis-methods" class="section level2">
 <h2>Notes on analysis methods</h2>
@@ -392,9 +401,6 @@ summary {
 <p>The table <a href="https://github.com/mayamathur/rpcb/blob/master/Results%20from%20R/Main%20tables/pw_metrics_table_exp_level.csv">pw_metrics_table_exp_level.csv</a> summarizes results by aggregating to the experiment level. Numerical and binary variables are summarized as means (or proportions) over outcomes within each experiment. Porig is a harmonic mean p-value over outcomes.</p>
 <p>The table <a href="https://github.com/mayamathur/rpcb/blob/master/Results%20from%20R/Main%20tables/moderator_regressions_outcome_level.csv">moderator_regressions_outcome_level.csv</a> shows the results of meta-regressions on the moderators.</p>
 </div>
-</div>
-<div id="to-do" class="section level2">
-<h2>To do</h2>
 </div>
 
 
